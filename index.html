@@ -1,0 +1,2275 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🐺 狼人殺紀錄</title>
+  <meta name="description" content="狼人殺遊戲紀錄工具 — 記錄玩家、角色、每回合流程與投票">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐺</text></svg>">
+  <style>
+    /* ===== 重置樣式 ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC',
+                   'Helvetica Neue', Arial, sans-serif;
+      background-color: #1a1025;
+      color: #e2d4f0;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    ul, ol {
+      list-style: none;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      border: none;
+      background: none;
+    }
+
+    input, select, textarea {
+      font-family: inherit;
+    }
+
+    /* ===== 版面配置 ===== */
+    #app {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0 24px;
+      border-bottom: 1px solid #3d2a5c;
+      margin-bottom: 24px;
+    }
+
+    .app-header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #bb86fc;
+    }
+
+    .app-header .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* ===== 按鈕 ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      opacity: 0.85;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background-color: #bb86fc;
+      color: #1a1025;
+      border-color: #bb86fc;
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      color: #bb86fc;
+      border-color: #3d2a5c;
+    }
+
+    .btn-secondary:hover {
+      background-color: #3d2a5c;
+      opacity: 1;
+    }
+
+    .btn-danger {
+      background-color: transparent;
+      color: #cf6679;
+      border-color: #cf6679;
+    }
+
+    .btn-danger:hover {
+      background-color: rgba(207, 102, 121, 0.15);
+      opacity: 1;
+    }
+
+    .btn-small {
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      border-radius: 6px;
+    }
+
+    /* ===== 面板 / 卡片 ===== */
+    .panel {
+      background-color: #2d1b4e;
+      border: 1px solid #3d2a5c;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #bb86fc;
+      margin-bottom: 16px;
+    }
+
+    /* ===== 遊戲列表列 ===== */
+    .game-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .game-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #2d1b4e;
+      border: 1px solid #3d2a5c;
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, background-color 0.15s;
+    }
+
+    .game-row:hover {
+      border-color: #bb86fc;
+      background-color: #38235e;
+    }
+
+    .game-row-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .game-row-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #e2d4f0;
+    }
+
+    .game-row-meta {
+      font-size: 0.75rem;
+      color: #9e8bb5;
+      display: flex;
+      gap: 10px;
+    }
+
+    .game-row-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .result-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .result-badge.wolf {
+      background-color: rgba(207, 102, 121, 0.2);
+      color: #cf6679;
+      border: 1px solid rgba(207, 102, 121, 0.4);
+    }
+
+    .result-badge.villager {
+      background-color: rgba(3, 218, 198, 0.15);
+      color: #03dac6;
+      border: 1px solid rgba(3, 218, 198, 0.35);
+    }
+
+    .result-badge.god {
+      background-color: rgba(187, 134, 252, 0.15);
+      color: #bb86fc;
+      border: 1px solid rgba(187, 134, 252, 0.35);
+    }
+
+    /* ===== 玩家格線 ===== */
+    .player-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .player-card {
+      background-color: #1a1025;
+      border: 1px solid #3d2a5c;
+      border-radius: 10px;
+      padding: 12px 10px;
+      text-align: center;
+      transition: border-color 0.15s;
+      position: relative;
+    }
+
+    .player-card:hover {
+      border-color: #bb86fc;
+    }
+
+    .player-card.dead {
+      opacity: 0.45;
+    }
+
+    .player-card.dead::after {
+      content: '☠';
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      font-size: 0.75rem;
+      color: #cf6679;
+    }
+
+    .player-num {
+      font-size: 0.6875rem;
+      color: #9e8bb5;
+      margin-bottom: 2px;
+    }
+
+    .player-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #e2d4f0;
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .player-role {
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 1px 6px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .player-role.wolf {
+      color: #cf6679;
+      background-color: rgba(207, 102, 121, 0.15);
+    }
+
+    .player-role.god {
+      color: #bb86fc;
+      background-color: rgba(187, 134, 252, 0.15);
+    }
+
+    .player-role.villager {
+      color: #03dac6;
+      background-color: rgba(3, 218, 198, 0.12);
+    }
+
+    /* ===== 回合分頁 ===== */
+    .round-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      padding-bottom: 4px;
+    }
+
+    .round-tab {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      background-color: #2d1b4e;
+      border: 1px solid #3d2a5c;
+      color: #9e8bb5;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .round-tab:hover {
+      border-color: #bb86fc;
+      color: #e2d4f0;
+    }
+
+    .round-tab.active {
+      background-color: #bb86fc;
+      border-color: #bb86fc;
+      color: #1a1025;
+      font-weight: 700;
+    }
+
+    .round-tab-add {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8125rem;
+      background-color: transparent;
+      border: 1px dashed #3d2a5c;
+      color: #9e8bb5;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .round-tab-add:hover {
+      border-color: #bb86fc;
+      color: #bb86fc;
+    }
+
+    /* ===== 夜晚 / 白天區塊 ===== */
+    .night-block {
+      background-color: #130d1a;
+      border: 1px solid #2a1a40;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .night-block-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #9e8bb5;
+      margin-bottom: 12px;
+    }
+
+    .night-block-header .icon {
+      font-size: 1rem;
+    }
+
+    .day-block {
+      background-color: #2d1b4e;
+      border: 1px solid #3d2a5c;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .day-block-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #bb86fc;
+      margin-bottom: 12px;
+    }
+
+    /* ===== 詳細頁頁首 ===== */
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .detail-header .back-btn {
+      color: #9e8bb5;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #3d2a5c;
+      background: transparent;
+      transition: color 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .detail-header .back-btn:hover {
+      color: #bb86fc;
+      border-color: #bb86fc;
+    }
+
+    .detail-header-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .detail-header-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #e2d4f0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .detail-header-meta {
+      font-size: 0.75rem;
+      color: #9e8bb5;
+      margin-top: 2px;
+    }
+
+    .detail-header-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ===== 表單 ===== */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #9e8bb5;
+      margin-bottom: 6px;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      background-color: #1a1025;
+      border: 1px solid #3d2a5c;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #e2d4f0;
+      font-size: 0.875rem;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+
+    .form-input::placeholder,
+    .form-textarea::placeholder {
+      color: #5c4d75;
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      border-color: #bb86fc;
+    }
+
+    .form-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239e8bb5' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+      cursor: pointer;
+    }
+
+    .form-select option {
+      background-color: #2d1b4e;
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    /* ===== 空狀態 ===== */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #9e8bb5;
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+
+    .empty-state-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e2d4f0;
+      margin-bottom: 8px;
+    }
+
+    .empty-state-desc {
+      font-size: 0.875rem;
+      margin-bottom: 24px;
+    }
+
+    /* ===== 彈窗遮罩 ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(19, 13, 26, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.hidden {
+      display: none;
+    }
+
+    .modal {
+      background-color: #2d1b4e;
+      border: 1px solid #3d2a5c;
+      border-radius: 14px;
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      color: #bb86fc;
+      margin-bottom: 20px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    /* ===== 投票 / 事件標籤 ===== */
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .tag-wolf {
+      color: #cf6679;
+      background-color: rgba(207, 102, 121, 0.15);
+      border: 1px solid rgba(207, 102, 121, 0.3);
+    }
+
+    .tag-god {
+      color: #bb86fc;
+      background-color: rgba(187, 134, 252, 0.12);
+      border: 1px solid rgba(187, 134, 252, 0.3);
+    }
+
+    .tag-villager {
+      color: #03dac6;
+      background-color: rgba(3, 218, 198, 0.1);
+      border: 1px solid rgba(3, 218, 198, 0.3);
+    }
+
+    /* ===== 分隔線 ===== */
+    .divider {
+      height: 1px;
+      background-color: #3d2a5c;
+      margin: 16px 0;
+    }
+
+    /* ===== 捲軸 ===== */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1a1025;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #3d2a5c;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #5a3d80;
+    }
+
+    /* ===== 工具類別 ===== */
+    .hidden {
+      display: none !important;
+    }
+
+    .text-muted {
+      color: #9e8bb5;
+    }
+
+    .text-wolf {
+      color: #cf6679;
+    }
+
+    .text-god {
+      color: #bb86fc;
+    }
+
+    .text-villager {
+      color: #03dac6;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .mt-8 { margin-top: 8px; }
+    .mt-12 { margin-top: 12px; }
+    .mt-16 { margin-top: 16px; }
+    .mb-8 { margin-bottom: 8px; }
+    .mb-12 { margin-bottom: 12px; }
+    .mb-16 { margin-bottom: 16px; }
+
+    .flex { display: flex; }
+    .flex-wrap { flex-wrap: wrap; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-6 { gap: 6px; }
+    .gap-8 { gap: 8px; }
+    .gap-12 { gap: 12px; }
+
+    /* ===== 響應式：768px ===== */
+    @media (max-width: 768px) {
+      #app {
+        padding: 12px;
+      }
+
+      .app-header h1 {
+        font-size: 1.25rem;
+      }
+
+      .player-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-header {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .detail-header-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+
+      .game-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .game-row-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+
+      .modal {
+        padding: 18px;
+      }
+
+      .btn {
+        padding: 7px 13px;
+      }
+    }
+
+    /* ===== 響應式：480px ===== */
+    @media (max-width: 480px) {
+      .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .round-tabs {
+        gap: 4px;
+      }
+
+      .round-tab {
+        padding: 5px 11px;
+        font-size: 0.75rem;
+      }
+
+      .panel {
+        padding: 14px;
+      }
+
+      .night-block,
+      .day-block {
+        padding: 12px;
+      }
+    }
+
+    .round-tabs::-webkit-scrollbar { height: 4px; }
+    .round-tabs::-webkit-scrollbar-track { background: transparent; }
+    .round-tabs::-webkit-scrollbar-thumb { background: #3d2a5c; border-radius: 2px; }
+    html { scroll-behavior: smooth; }
+
+    /* 日期輸入框 — 讓日曆圖示在深色背景下可見 */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.7) brightness(1.5);
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 4px;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator:hover {
+      filter: invert(0.9) brightness(1.8);
+    }
+    input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+      color: #e2d4f0;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    /* ================================================
+       資料層 — 狼人殺紀錄器
+       ================================================ */
+
+    // ---------- 唯一識別碼 ----------
+    function generateId() {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+      }
+      // 備用方案：RFC 4122 v4
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    }
+
+    // ---------- localStorage 輔助函式 ----------
+    const STORAGE_KEY = 'werewolf-games';
+
+    function loadGames() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        console.error('[loadGames] parse error:', e);
+        return [];
+      }
+    }
+
+    function saveGames(games) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+      } catch (e) {
+        console.error('[saveGames] write error:', e);
+      }
+    }
+
+    // ---------- 新增讀取更新刪除 ----------
+    function getGame(id) {
+      return loadGames().find(g => g.id === id) || null;
+    }
+
+    function createGame(data) {
+      const now = new Date().toISOString();
+      const game = {
+        date: data.date || now.slice(0, 10),
+        title: data.title || '新遊戲',
+        board: data.board || { name: '', roles: [] },
+        players: data.players || [],
+        rounds: data.rounds || [],
+        result: data.result || { winner: '', detail: '' },
+        id: generateId(),
+        createdAt: now,
+        updatedAt: now,
+      };
+      const games = loadGames();
+      games.unshift(game);
+      saveGames(games);
+      return game;
+    }
+
+    function updateGame(id, updates) {
+      const games = loadGames();
+      const idx = games.findIndex(g => g.id === id);
+      if (idx === -1) return null;
+      games[idx] = { ...games[idx], ...updates, updatedAt: new Date().toISOString() };
+      saveGames(games);
+      return games[idx];
+    }
+
+    function deleteGame(id) {
+      const games = loadGames().filter(g => g.id !== id);
+      saveGames(games);
+    }
+
+    // ---------- 匯出 / 匯入 ----------
+    function exportGames() {
+      const games = loadGames();
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const filename = `werewolf-backup-${dateStr}.json`;
+      const blob = new Blob([JSON.stringify(games, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    /**
+     * importGames(file, mode)
+     * mode: 'merge'     — 跳過已存在 id 的遊戲
+     *       'overwrite' — 以匯入資料取代整個儲存
+     * 回傳 Promise<{ imported: number, skipped: number }>
+     */
+    function importGames(file, mode) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const imported = JSON.parse(e.target.result);
+            if (!Array.isArray(imported)) throw new Error('匯入檔案格式錯誤');
+
+            if (mode === 'overwrite') {
+              saveGames(imported);
+              resolve({ imported: imported.length, skipped: 0 });
+            } else {
+              // 合併 — 依 id 跳過重複項目
+              const existing = loadGames();
+              const existingIds = new Set(existing.map(g => g.id));
+              const toAdd = imported.filter(g => !existingIds.has(g.id));
+              saveGames([...toAdd, ...existing]);
+              resolve({ imported: toAdd.length, skipped: imported.length - toAdd.length });
+            }
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = () => reject(new Error('讀取檔案失敗'));
+        reader.readAsText(file);
+      });
+    }
+
+    // ---------- 角色分類 ----------
+    const WOLF_ROLES = ['小狼', '狼王', '白狼王', '狼美人', '隱狼', '惡魔', '狼兄', '狼弟', '機械狼'];
+    const GOD_ROLES  = ['預言家','通靈師', '女巫', '獵人', '守衛', '白癡', '丘比特', '盜賊', '黑市商人', '騎士'];
+
+    function getRoleClass(role) {
+      if (WOLF_ROLES.includes(role)) return 'wolf';
+      if (GOD_ROLES.includes(role))  return 'god';
+      return 'villager';
+    }
+
+    function getResultWinner(result) {
+      if (!result) return '';
+      if (typeof result === 'object') return result.winner || '';
+      return result;
+    }
+
+    function getResultDetail(result) {
+      if (!result) return '';
+      if (typeof result === 'object') return result.detail || '';
+      return '';
+    }
+
+    // ---------- 應用程式狀態 ----------
+    const appState = {
+      currentView:    'list',   // 'list'（列表）| 'detail'（詳細）| 'edit'（編輯）
+      currentGameId:  null,
+      currentRound:   0,
+      editMode:       false,
+      newRoles:       [],       // 新遊戲表單狀態
+      newPlayers:     [],
+      eventsBound:    false,    // 防止重複監聽器
+    };
+
+    /* ================================================
+       渲染層 — 遊戲列表畫面
+       ================================================ */
+
+    // ---------- HTML 跳脫 ----------
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // ---------- 頁面導航 ----------
+    function navigateTo(view, gameId) {
+      appState.currentView   = view;
+      appState.currentGameId = gameId || null;
+      appState.currentRound  = 0;
+      appState.editMode      = false;
+      if (view === 'new') {
+        appState.newRoles   = [];
+        appState.newPlayers = [];
+      }
+      renderApp();
+    }
+
+    // ---------- 渲染列表畫面 ----------
+    function renderListView() {
+      const games = loadGames();
+
+      // 依日期降序排序（最新在前）
+      const sorted = games.slice().sort((a, b) => {
+        const da = a.date || a.createdAt || '';
+        const db = b.date || b.createdAt || '';
+        return db.localeCompare(da);
+      });
+
+      const header = `
+        <header class="app-header">
+          <h1>🐺 狼人殺紀錄</h1>
+          <div class="header-actions">
+            <button class="btn btn-secondary" id="btn-import">匯入</button>
+            <button class="btn btn-secondary" id="btn-export">匯出</button>
+            <button class="btn btn-primary" id="btn-new-game">+ 新遊戲</button>
+          </div>
+        </header>
+      `;
+
+      let body;
+      if (sorted.length === 0) {
+        body = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🐺</div>
+            <div class="empty-state-title">還沒有任何遊戲紀錄</div>
+            <div class="empty-state-desc">開始記錄你的第一場狼人殺吧！</div>
+            <button class="btn btn-primary" id="btn-new-game-empty">+ 新增遊戲</button>
+          </div>
+        `;
+      } else {
+        const rows = sorted.map(game => {
+          // 格式化日期為 MM/DD
+          let dateDisplay = '';
+          if (game.date) {
+            const parts = game.date.slice(0, 10).split('-');
+            if (parts.length === 3) {
+              dateDisplay = `${parts[1]}/${parts[2]}`;
+            } else {
+              dateDisplay = escapeHtml(game.date);
+            }
+          }
+
+          // 結果標籤
+          const winner = getResultWinner(game.result);
+          let resultBadge;
+          if (winner === '好人' || winner === 'villager') {
+            resultBadge = `<span class="result-badge villager">✅ 好人勝</span>`;
+          } else if (winner === '狼人' || winner === 'wolf') {
+            resultBadge = `<span class="result-badge wolf">🐺 狼人勝</span>`;
+          } else {
+            resultBadge = `<span class="result-badge">⏳ 進行中</span>`;
+          }
+
+          const roundCount = Array.isArray(game.rounds) ? game.rounds.length : 0;
+
+          return `
+            <div class="game-row" data-id="${escapeHtml(game.id)}">
+              <div class="game-row-info">
+                <div class="game-row-title">${escapeHtml(game.title || '未命名遊戲')}</div>
+                <div class="game-row-meta">
+                  <span>${dateDisplay}</span>
+                  ${game.board && game.board.name ? `<span>${escapeHtml(game.board.name)}</span>` : (typeof game.board === 'string' && game.board ? `<span>${escapeHtml(game.board)}</span>` : '')}
+                  <span>${roundCount} 局</span>
+                </div>
+              </div>
+              <div class="game-row-actions">
+                ${resultBadge}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        body = `<div class="game-list">${rows}</div>`;
+      }
+
+      // 隱藏的匯入檔案輸入框
+      const fileInput = `<input type="file" id="file-input" accept=".json" class="hidden">`;
+
+      return header + body + fileInput;
+    }
+
+    // ---------- 渲染新增遊戲畫面 ----------
+    function renderNewGameView() {
+      const today = new Date().toISOString().slice(0, 10);
+
+      return `
+        <div class="detail-header">
+          <button class="back-btn btn btn-secondary" data-action="nav-list">← 返回</button>
+          <div class="detail-header-info">
+            <div class="detail-header-title">新增遊戲</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">基本資訊</div>
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label" for="new-date">日期</label>
+              <input class="form-input" type="date" id="new-date" value="${today}">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label" for="new-title">遊戲標題</label>
+              <input class="form-input" type="text" id="new-title" placeholder="例：週末例行局">
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">板子配置</div>
+          <div class="form-group">
+            <label class="form-label" for="new-board">板子名稱</label>
+            <input class="form-input" type="text" id="new-board" placeholder="例：標準十二人板">
+          </div>
+          <div class="form-group" style="margin-bottom:8px">
+            <label class="form-label">新增角色</label>
+            <div class="flex gap-8 items-center">
+              <input class="form-input" type="text" id="new-role-input" placeholder="例：狼人、預言家、平民" style="flex:1">
+              <button class="btn btn-secondary" id="btn-add-role">新增</button>
+            </div>
+          </div>
+          <div id="role-tags" class="flex flex-wrap gap-6" style="min-height:24px"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title flex justify-between items-center">
+            <span>玩家</span>
+            <span id="player-count" class="text-muted" style="font-size:0.8125rem;font-weight:400">0 位玩家</span>
+          </div>
+          <div id="player-forms"></div>
+          <button class="btn btn-secondary mt-8" id="btn-add-player">+ 新增玩家</button>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-secondary" data-action="nav-list">取消</button>
+          <button class="btn btn-primary" id="btn-save-game">儲存遊戲</button>
+        </div>
+      `;
+    }
+
+    // ---------- 取得玩家標籤 ----------
+    function getPlayerLabel(seat, game) {
+      const player = (game.players || []).find(p => p.seat === seat);
+      if (!player) return `${seat} 號`;
+      const name = player.name ? `（${player.name}）` : '';
+      return `${seat} 號${name}`;
+    }
+
+    // ---------- 渲染玩家格線 ----------
+    function renderPlayerGrid(game) {
+      const players = game.players || [];
+      if (players.length === 0) {
+        return `
+          <div class="panel">
+            <div class="panel-title">玩家配置</div>
+            <p class="text-muted" style="font-size:0.875rem;">尚未設定玩家</p>
+          </div>
+        `;
+      }
+
+      const cards = players.map(p => {
+        const roleClass = getRoleClass(p.role || '');
+        const deadClass = p.alive === false ? ' dead' : '';
+        const roleEmoji = roleClass === 'wolf' ? '🐺 ' : '';
+        const roleName = p.role ? `${roleEmoji}${escapeHtml(p.role)}` : '未知';
+        return `
+          <div class="player-card${deadClass}">
+            <div class="player-num">${p.seat} 號</div>
+            <div class="player-name">${escapeHtml(p.name || '（未填）')}</div>
+            <span class="player-role ${roleClass}">${roleName}</span>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="panel">
+          <div class="panel-title">玩家配置</div>
+          <div class="player-grid">${cards}</div>
+          <p class="text-muted mt-8" style="font-size:0.75rem;">半透明 = 已出局</p>
+        </div>
+      `;
+    }
+
+    // ---------- 渲染夜晚區塊 ----------
+    function renderNight(night, game) {
+      if (!night) return '';
+
+      const rows = [];
+
+      // 狼人殺人
+      if (night.wolfKill !== undefined && night.wolfKill !== null) {
+        const target = night.wolfKill === '' ? '無' : getPlayerLabel(night.wolfKill, game);
+        rows.push(`<div style="display:flex;gap:8px;align-items:flex-start;">
+          <span>🐺 狼刀：</span>
+          <span class="text-wolf">${escapeHtml(String(target))}</span>
+        </div>`);
+      }
+
+      // 預言家查驗
+      if (night.seerTarget !== undefined && night.seerTarget !== null) {
+        const target = night.seerTarget === '' ? '無' : getPlayerLabel(night.seerTarget, game);
+        const seerResultLabel = { '好人': '金水', '壞人': '查殺' }[night.seerResult] || night.seerResult;
+        const result = seerResultLabel ? `→ ${escapeHtml(String(seerResultLabel))}` : '';
+        rows.push(`<div style="display:flex;gap:8px;align-items:flex-start;">
+          <span>🔮 預言家：</span>
+          <span class="text-god">${escapeHtml(String(target))} ${result}</span>
+        </div>`);
+      }
+
+      // 女巫 — 只有實際發動行動時才渲染
+      if (night.witchSave !== undefined && night.witchSave !== null && night.witchSave !== '') {
+        const saveTarget = getPlayerLabel(night.witchSave, game);
+        rows.push(`<div style="display:flex;gap:8px;align-items:flex-start;">
+          <span>🧪 女巫銀水：</span>
+          <span style="color:#03dac6;">救 ${escapeHtml(String(saveTarget))}</span>
+        </div>`);
+      }
+      if (night.witchPoison !== undefined && night.witchPoison !== null && night.witchPoison !== '') {
+        const poisonTarget = getPlayerLabel(night.witchPoison, game);
+        rows.push(`<div style="display:flex;gap:8px;align-items:flex-start;">
+          <span>🧪 女巫毒：</span>
+          <span class="text-wolf">毒 ${escapeHtml(String(poisonTarget))}</span>
+        </div>`);
+      }
+
+      // 守衛
+      if (night.guardTarget !== undefined && night.guardTarget !== null) {
+        const target = night.guardTarget === '' ? '無' : getPlayerLabel(night.guardTarget, game);
+        rows.push(`<div style="display:flex;gap:8px;align-items:flex-start;">
+          <span>🛡️ 守衛：</span>
+          <span class="text-god">${escapeHtml(String(target))}</span>
+        </div>`);
+      }
+
+      // 自訂技能行動
+      if (Array.isArray(night.customActions)) {
+        night.customActions.forEach(action => {
+          rows.push(`<div style="display:flex;gap:8px;align-items:flex-start;">
+            <span>⚡ ${escapeHtml(String(action.role || ''))}: </span>
+            <span>${escapeHtml(String(action.description || ''))}</span>
+          </div>`);
+        });
+      }
+
+      // 死亡摘要
+      let deathsHtml = '';
+      if (Array.isArray(night.deaths) && night.deaths.length > 0) {
+        const deathLabels = night.deaths.map(seat => getPlayerLabel(seat, game));
+        deathsHtml = `
+          <div style="border-top:1px solid #2a1a40;margin-top:12px;padding-top:10px;font-size:0.8125rem;">
+            <span class="text-muted">夜間出局：</span>
+            <span class="text-wolf">${deathLabels.map(l => escapeHtml(String(l))).join('、')}</span>
+          </div>
+        `;
+      } else {
+        deathsHtml = `
+          <div style="border-top:1px solid #2a1a40;margin-top:12px;padding-top:10px;font-size:0.8125rem;">
+            <span style="color:#03dac6;">🌙 平安夜</span>
+          </div>
+        `;
+      }
+
+      const contentHtml = rows.length > 0
+        ? `<div style="display:flex;flex-direction:column;gap:8px;font-size:0.875rem;">${rows.join('')}</div>`
+        : `<p class="text-muted" style="font-size:0.875rem;">無夜晚行動紀錄</p>`;
+
+      return `
+        <div class="night-block">
+          <div class="night-block-header">
+            <span class="icon">🌙</span>
+            <span>夜晚</span>
+          </div>
+          ${contentHtml}
+          ${deathsHtml}
+        </div>
+      `;
+    }
+
+    // ---------- 渲染白天區塊 ----------
+    function renderDay(day, game) {
+      if (!day) return '';
+
+      const sections = [];
+
+      // 警長競選
+      if (day.sheriff) {
+        const candidates = Array.isArray(day.sheriff.candidates)
+          ? day.sheriff.candidates.map(s => escapeHtml(String(getPlayerLabel(s, game)))).join('、')
+          : '';
+        const winner = day.sheriff.winner !== undefined && day.sheriff.winner !== null && day.sheriff.winner !== ''
+          ? `→ 當選：<span style="color:#bb86fc;font-weight:600;">${escapeHtml(String(getPlayerLabel(day.sheriff.winner, game)))}</span>`
+          : '';
+        sections.push(`
+          <div class="mb-8">
+            <div style="font-size:0.8125rem;font-weight:600;color:#9e8bb5;margin-bottom:4px;">👑 警長競選</div>
+            <div style="font-size:0.875rem;">
+              ${candidates ? `候選人：${candidates}` : ''}
+              ${winner ? `<span style="margin-left:8px;">${winner}</span>` : ''}
+            </div>
+          </div>
+        `);
+      }
+
+      // 發言
+      if (Array.isArray(day.speeches) && day.speeches.length > 0) {
+        const speechLines = day.speeches.map(s => {
+          const label = escapeHtml(String(getPlayerLabel(s.seat, game)));
+          const summary = escapeHtml(String(s.summary || ''));
+          return `<div style="margin-bottom:4px;"><span style="color:#9e8bb5;min-width:60px;display:inline-block;">${label}</span>${summary}</div>`;
+        }).join('');
+        sections.push(`
+          <div class="mb-8">
+            <div style="font-size:0.8125rem;font-weight:600;color:#9e8bb5;margin-bottom:4px;">💬 發言</div>
+            <div style="font-size:0.875rem;">${speechLines}</div>
+          </div>
+        `);
+      }
+
+      // 投票
+      if (day.vote) {
+        let voteHtml = '';
+        if (day.vote.eliminated !== undefined && day.vote.eliminated !== null && day.vote.eliminated !== '') {
+          const elim = escapeHtml(String(getPlayerLabel(day.vote.eliminated, game)));
+          voteHtml += `<div style="margin-bottom:4px;">出局：<span class="text-wolf">${elim}</span></div>`;
+        } else {
+          voteHtml += `<div style="margin-bottom:4px;" class="text-muted">無人出局</div>`;
+        }
+        if (Array.isArray(day.vote.details) && day.vote.details.length > 0) {
+          // 依被投者分組，每組一行
+          const grouped = {};
+          day.vote.details.forEach(v => {
+            if (!grouped[v.target]) grouped[v.target] = [];
+            grouped[v.target].push(v.voter);
+          });
+          const voteLines = Object.entries(grouped).map(([target, voters]) => {
+            const targetLabel = target === 'x' ? '棄票' : escapeHtml(String(getPlayerLabel(Number(target), game)));
+            const targetStyle = target === 'x' ? 'color:#9e8bb5;font-style:italic;' : '';
+            const voterLabels = voters.map(voter => escapeHtml(String(getPlayerLabel(voter, game)))).join('、');
+            return `<div style="margin-bottom:2px;"><span style="${targetStyle}" class="${target === 'x' ? '' : 'text-wolf'}">${targetLabel}</span><span style="color:#9e8bb5;">　←　${voterLabels}</span></div>`;
+          }).join('');
+          voteHtml += `<div style="font-size:0.8125rem;margin-top:6px;">${voteLines}</div>`;
+        }
+        sections.push(`
+          <div class="mb-8">
+            <div style="font-size:0.8125rem;font-weight:600;color:#9e8bb5;margin-bottom:4px;">🗳️ 投票</div>
+            <div style="font-size:0.875rem;">${voteHtml}</div>
+          </div>
+        `);
+      }
+
+      // 遺言
+      if (day.lastWords !== undefined && day.lastWords !== null && day.lastWords !== '') {
+        sections.push(`
+          <div class="mb-8">
+            <div style="font-size:0.8125rem;font-weight:600;color:#9e8bb5;margin-bottom:4px;">遺言</div>
+            <div style="font-size:0.875rem;" class="text-muted">${escapeHtml(String(day.lastWords))}</div>
+          </div>
+        `);
+      }
+
+      const contentHtml = sections.length > 0
+        ? sections.join('')
+        : `<p class="text-muted" style="font-size:0.875rem;">無白天紀錄</p>`;
+
+      return `
+        <div class="day-block">
+          <div class="day-block-header">
+            <span>☀️</span>
+            <span>白天</span>
+          </div>
+          ${contentHtml}
+        </div>
+      `;
+    }
+
+    // ---------- 渲染回合紀錄 ----------
+    function renderRounds(game) {
+      const rounds = game.rounds || [];
+
+      if (rounds.length === 0) {
+        return `
+          <div class="panel">
+            <div class="panel-title">回合紀錄</div>
+            <p class="text-muted" style="font-size:0.875rem;">尚無回合紀錄，點擊「編輯」開始記錄</p>
+          </div>
+        `;
+      }
+
+      const currentRound = appState.currentRound < rounds.length ? appState.currentRound : 0;
+
+      const tabs = rounds.map((r, idx) => {
+        const activeClass = idx === currentRound ? ' active' : '';
+        return `<button class="round-tab${activeClass}" data-round="${idx}">第 ${idx + 1} 局</button>`;
+      }).join('');
+
+      const round = rounds[currentRound];
+      const nightHtml = renderNight(round.night, game);
+      const dayHtml = renderDay(round.day, game);
+
+      return `
+        <div class="panel">
+          <div class="panel-title">回合紀錄</div>
+          <div class="round-tabs">${tabs}</div>
+          ${nightHtml}
+          ${dayHtml}
+        </div>
+      `;
+    }
+
+    // ---------- 渲染詳細畫面 ----------
+    function renderDetailView() {
+      const game = getGame(appState.currentGameId);
+      if (!game) {
+        return `
+          <div class="detail-header">
+            <button class="back-btn btn btn-secondary" data-action="nav-list">← 返回</button>
+          </div>
+          <p class="text-muted text-center mt-16">找不到此遊戲紀錄。</p>
+        `;
+      }
+
+      // 格式化日期
+      let dateDisplay = '';
+      if (game.date) {
+        const parts = game.date.slice(0, 10).split('-');
+        if (parts.length === 3) {
+          dateDisplay = `${parts[0]}/${parts[1]}/${parts[2]}`;
+        } else {
+          dateDisplay = escapeHtml(game.date);
+        }
+      }
+
+      // 結果標籤 / 樣式
+      const winner = getResultWinner(game.result);
+      let resultBadge;
+      if (winner === '好人' || winner === 'villager') {
+        resultBadge = `<span class="result-badge villager">✅ 好人勝</span>`;
+      } else if (winner === '狼人' || winner === 'wolf') {
+        resultBadge = `<span class="result-badge wolf">🐺 狼人勝</span>`;
+      } else {
+        resultBadge = `<span class="result-badge">⏳ 進行中</span>`;
+      }
+
+      const boardDisplay = game.board && game.board.name ? game.board.name : (typeof game.board === 'string' ? game.board : '');
+      const metaParts = [dateDisplay, boardDisplay ? escapeHtml(boardDisplay) : ''].filter(Boolean);
+
+      const header = `
+        <div class="detail-header">
+          <button class="back-btn btn btn-secondary" data-action="nav-list">← 返回</button>
+          <div class="detail-header-info">
+            <div class="detail-header-title">${escapeHtml(game.title || '未命名遊戲')}</div>
+            <div class="detail-header-meta">${metaParts.join(' · ')} ${resultBadge}</div>
+          </div>
+          <div class="detail-header-actions">
+            <button class="btn btn-secondary" id="btn-edit-game">✏️ 編輯</button>
+            <button class="btn btn-danger" id="btn-delete-game">🗑️ 刪除</button>
+          </div>
+        </div>
+      `;
+
+      return header + renderPlayerGrid(game) + renderRounds(game);
+    }
+
+    // ---------- 收集回合資料 ----------
+    function collectRoundData(existingRound) {
+      const round = existingRound || { night: {}, day: {} };
+
+      // 夜晚資料
+      const night = {};
+      const wolfKillEl = document.getElementById('edit-wolf-kill');
+      const guardEl = document.getElementById('edit-guard-protect');
+      const seerCheckEl = document.getElementById('edit-seer-check');
+      const seerResultEl = document.getElementById('edit-seer-result');
+      const witchSaveEl = document.getElementById('edit-witch-save');
+      const witchPoisonEl = document.getElementById('edit-witch-poison');
+      const customActionsEl = document.getElementById('edit-custom-actions');
+      const nightDeathsEl = document.getElementById('edit-night-deaths');
+
+      night.wolfKill = wolfKillEl && wolfKillEl.value !== '' ? parseInt(wolfKillEl.value, 10) : '';
+      night.guardTarget = guardEl && guardEl.value !== '' ? parseInt(guardEl.value, 10) : '';
+      night.seerTarget = seerCheckEl && seerCheckEl.value !== '' ? parseInt(seerCheckEl.value, 10) : '';
+      night.seerResult = seerResultEl ? seerResultEl.value : '';
+      if (witchSaveEl && witchSaveEl.value === 'saved' && night.wolfKill !== '') {
+        night.witchSave = night.wolfKill;
+      } else {
+        night.witchSave = '';
+      }
+      night.witchPoison = witchPoisonEl && witchPoisonEl.value !== '' ? parseInt(witchPoisonEl.value, 10) : '';
+
+      // 解析自訂技能行動
+      night.customActions = [];
+      if (customActionsEl && customActionsEl.value.trim()) {
+        customActionsEl.value.trim().split('\n').forEach(line => {
+          const colonIdx = line.search(/[：:]/);
+          if (colonIdx > 0) {
+            night.customActions.push({
+              role: line.slice(0, colonIdx).trim(),
+              description: line.slice(colonIdx + 1).trim()
+            });
+          }
+        });
+      }
+
+      // 解析死亡名單
+      night.deaths = [];
+      if (nightDeathsEl && nightDeathsEl.value.trim()) {
+        night.deaths = nightDeathsEl.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+      }
+
+      // 白天資料
+      const day = {};
+      const sheriffCandidatesEl = document.getElementById('edit-sheriff-candidates');
+      const sheriffWinnerEl = document.getElementById('edit-sheriff-winner');
+      const speechesEl = document.getElementById('edit-speeches');
+      const voteDetailsEl = document.getElementById('edit-vote-details');
+      const eliminatedEl = document.getElementById('edit-eliminated');
+      const lastWordsEl = document.getElementById('edit-last-words');
+
+      // 警長
+      day.sheriff = {};
+      if (sheriffCandidatesEl && sheriffCandidatesEl.value.trim()) {
+        day.sheriff.candidates = sheriffCandidatesEl.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+      } else {
+        day.sheriff.candidates = [];
+      }
+      day.sheriff.winner = sheriffWinnerEl && sheriffWinnerEl.value !== '' ? parseInt(sheriffWinnerEl.value, 10) : '';
+
+      // 發言
+      day.speeches = [];
+      if (speechesEl && speechesEl.value.trim()) {
+        speechesEl.value.trim().split('\n').forEach(line => {
+          const colonIdx = line.search(/[：:]/);
+          if (colonIdx > 0) {
+            const seat = parseInt(line.slice(0, colonIdx).trim(), 10);
+            if (!isNaN(seat)) {
+              day.speeches.push({ seat, summary: line.slice(colonIdx + 1).trim() });
+            }
+          }
+        });
+      }
+
+      // 投票
+      day.vote = {};
+      day.vote.details = [];
+      if (voteDetailsEl && voteDetailsEl.value.trim()) {
+        voteDetailsEl.value.trim().split('\n').forEach(line => {
+          // 支援 ← 與 <- 兩種格式（被投者←投票者，投票者可用逗號分隔多人，例：1←2,3,4）
+          const arrowIdx = line.indexOf('←');
+          const dashIdx = line.indexOf('<-');
+          let parts;
+          if (arrowIdx > 0) {
+            parts = [line.slice(0, arrowIdx), line.slice(arrowIdx + 1)];
+          } else if (dashIdx > 0) {
+            parts = [line.slice(0, dashIdx), line.slice(dashIdx + 2)];
+          }
+          if (parts) {
+            const rawTarget = parts[0].trim().toLowerCase();
+            const target = rawTarget === 'x' ? 'x' : parseInt(rawTarget, 10);
+            if (target !== 'x' && isNaN(target)) return;
+            parts[1].split(',').forEach(v => {
+              const voter = parseInt(v.trim(), 10);
+              if (!isNaN(voter)) {
+                day.vote.details.push({ voter, target });
+              }
+            });
+          }
+        });
+      }
+      day.vote.eliminated = eliminatedEl && eliminatedEl.value !== '' ? parseInt(eliminatedEl.value, 10) : '';
+      day.lastWords = lastWordsEl ? lastWordsEl.value : '';
+
+      return { night, day };
+    }
+
+    // ---------- 儲存目前編輯回合 ----------
+    function saveCurrentEditRound() {
+      const game = getGame(appState.currentGameId);
+      if (!game || !game.rounds || game.rounds.length === 0) return;
+      const ri = appState.currentRound < game.rounds.length ? appState.currentRound : 0;
+      // 只有在編輯畫面且表單元素存在時才儲存
+      if (!document.getElementById('edit-wolf-kill')) return;
+      game.rounds[ri] = collectRoundData(game.rounds[ri]);
+      updateGame(game.id, { rounds: game.rounds });
+    }
+
+    // ---------- 儲存目前編輯玩家 ----------
+    function saveCurrentEditPlayers() {
+      const game = getGame(appState.currentGameId);
+      if (!game) return;
+      const players = game.players || [];
+      let changed = false;
+      document.querySelectorAll('[data-action="edit-player-name"]').forEach(input => {
+        const idx = parseInt(input.dataset.idx, 10);
+        if (!isNaN(idx) && players[idx]) { players[idx].name = input.value.trim(); changed = true; }
+      });
+      document.querySelectorAll('[data-action="edit-player-role"]').forEach(input => {
+        const idx = parseInt(input.dataset.idx, 10);
+        if (!isNaN(idx) && players[idx]) { players[idx].role = input.value.trim(); changed = true; }
+      });
+      if (changed) updateGame(game.id, { players });
+    }
+
+    // ---------- 渲染編輯玩家區塊 ----------
+    function renderEditPlayers(game) {
+      const players = game.players || [];
+      if (players.length === 0) {
+        return `
+          <div class="panel">
+            <div class="panel-title">玩家配置</div>
+            <p class="text-muted" style="font-size:0.875rem;">尚未設定玩家</p>
+          </div>
+        `;
+      }
+
+      const rows = players.map((p, idx) => {
+        const aliveClass = p.alive === false ? 'btn btn-danger btn-small' : 'btn btn-secondary btn-small';
+        const aliveText = p.alive === false ? '出局' : '存活';
+        return `
+          <div class="flex gap-8 items-center" style="margin-bottom:8px;">
+            <span class="text-muted" style="font-size:0.8125rem;min-width:28px;text-align:center;">${p.seat}</span>
+            <input class="form-input" type="text" placeholder="玩家名稱"
+              data-action="edit-player-name" data-idx="${idx}"
+              value="${escapeHtml(p.name || '')}" style="flex:1;">
+            <input class="form-input" type="text" placeholder="角色"
+              data-action="edit-player-role" data-idx="${idx}"
+              value="${escapeHtml(p.role || '')}" style="flex:1;">
+            <button class="${aliveClass}" data-action="toggle-alive" data-idx="${idx}" style="flex-shrink:0;">${aliveText}</button>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="panel">
+          <div class="panel-title">玩家配置</div>
+          ${rows}
+        </div>
+      `;
+    }
+
+    // ---------- 渲染編輯回合區塊 ----------
+    function renderEditRounds(game) {
+      const rounds = game.rounds || [];
+      const currentRound = appState.currentRound < rounds.length ? appState.currentRound : 0;
+
+      if (rounds.length === 0) {
+        return `
+          <div class="panel">
+            <div class="panel-title">回合紀錄</div>
+            <p class="text-muted" style="font-size:0.875rem;margin-bottom:12px;">尚無回合紀錄</p>
+            <button class="btn btn-secondary" data-action="add-round">+ 新增回合</button>
+          </div>
+        `;
+      }
+
+      const tabs = rounds.map((r, idx) => {
+        const activeClass = idx === currentRound ? ' active' : '';
+        return `<button class="round-tab${activeClass}" data-action="edit-round-tab" data-round="${idx}">第 ${idx + 1} 局</button>`;
+      }).join('');
+
+      const round = rounds[currentRound];
+      const night = round.night || {};
+      const day = round.day || {};
+
+      // 預言家查驗結果下拉選單
+      const seerResultVal = night.seerResult || '';
+      const seerResultOpts = `
+        <option value=""${seerResultVal === '' ? ' selected' : ''}>未查驗</option>
+        <option value="金水"${seerResultVal === '金水' || seerResultVal === '好人' ? ' selected' : ''}>金水</option>
+        <option value="查殺"${seerResultVal === '查殺' || seerResultVal === '壞人' ? ' selected' : ''}>查殺</option>
+      `;
+
+      // 女巫救人下拉選單
+      const witchSaveVal = (night.witchSave !== undefined && night.witchSave !== null && night.witchSave !== '') ? 'saved' : '';
+      const witchSaveOpts = `
+        <option value=""${witchSaveVal === '' ? ' selected' : ''}>未救</option>
+        <option value="saved"${witchSaveVal === 'saved' ? ' selected' : ''}>救了</option>
+      `;
+
+      // 自訂技能行動文字區塊
+      const customActionsText = Array.isArray(night.customActions)
+        ? night.customActions.map(a => `${a.role || ''}:${a.description || ''}`).join('\n')
+        : '';
+
+      // 死亡名單文字
+      const deathsText = Array.isArray(night.deaths) ? night.deaths.join(',') : '';
+
+      // 警長候選人
+      const sheriff = day.sheriff || {};
+      const candidatesText = Array.isArray(sheriff.candidates) ? sheriff.candidates.join(',') : '';
+      const sheriffWinner = sheriff.winner !== undefined && sheriff.winner !== null ? sheriff.winner : '';
+
+      // 發言文字區塊
+      const speechesText = Array.isArray(day.speeches)
+        ? day.speeches.map(s => `${s.seat}:${s.summary || ''}`).join('\n')
+        : '';
+
+      // 投票明細文字區塊
+      const vote = day.vote || {};
+      // 將相同被投者的投票者合併，顯示為 被投者←投票者1,投票者2 的格式
+      const voteDetailsText = (() => {
+        if (!Array.isArray(vote.details) || vote.details.length === 0) return '';
+        const grouped = {};
+        vote.details.forEach(v => {
+          if (!grouped[v.target]) grouped[v.target] = [];
+          grouped[v.target].push(v.voter);
+        });
+        return Object.entries(grouped)
+          .map(([target, voters]) => `${target === 'x' ? 'x' : target}←${voters.join(',')}`)
+          .join('\n');
+      })();
+      const eliminatedVal = vote.eliminated !== undefined && vote.eliminated !== null ? vote.eliminated : '';
+      const lastWordsVal = day.lastWords || '';
+
+      const nightForm = `
+        <div class="night-block">
+          <div class="night-block-header">
+            <span class="icon">🌙</span>
+            <span>夜晚</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">狼刀（座號）</label>
+            <input class="form-input" type="number" id="edit-wolf-kill" value="${night.wolfKill !== undefined && night.wolfKill !== null ? night.wolfKill : ''}" placeholder="座號">
+          </div>
+          <div class="form-group">
+            <label class="form-label">守衛守（座號）</label>
+            <input class="form-input" type="number" id="edit-guard-protect" value="${night.guardTarget !== undefined && night.guardTarget !== null ? night.guardTarget : ''}" placeholder="座號">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">預言家查（座號）</label>
+              <input class="form-input" type="number" id="edit-seer-check" value="${night.seerTarget !== undefined && night.seerTarget !== null ? night.seerTarget : ''}" placeholder="座號">
+            </div>
+            <div class="form-group">
+              <label class="form-label">查驗結果</label>
+              <select class="form-select" id="edit-seer-result">${seerResultOpts}</select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">女巫救</label>
+              <select class="form-select" id="edit-witch-save">${witchSaveOpts}</select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">女巫毒（座號）</label>
+              <input class="form-input" type="number" id="edit-witch-poison" value="${night.witchPoison !== undefined && night.witchPoison !== null ? night.witchPoison : ''}" placeholder="座號">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">自訂技能（每行一個，格式：角色名:描述）</label>
+            <textarea class="form-textarea" id="edit-custom-actions" placeholder="例：騎士:查驗3號">${escapeHtml(customActionsText)}</textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">實際死亡（座號，逗號分隔）</label>
+            <input class="form-input" type="text" id="edit-night-deaths" value="${escapeHtml(deathsText)}" placeholder="例：3,7">
+          </div>
+        </div>
+      `;
+
+      const sheriffForm = currentRound === 0 ? `
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">警長候選（座號，逗號分隔）</label>
+              <input class="form-input" type="text" id="edit-sheriff-candidates" value="${escapeHtml(candidatesText)}" placeholder="例：1,3,5">
+            </div>
+            <div class="form-group">
+              <label class="form-label">當選者（座號）</label>
+              <input class="form-input" type="number" id="edit-sheriff-winner" value="${sheriffWinner}" placeholder="座號">
+            </div>
+          </div>
+      ` : '';
+
+      const dayForm = `
+        <div class="day-block">
+          <div class="day-block-header">
+            <span>☀️</span>
+            <span>白天</span>
+          </div>
+          ${sheriffForm}
+          <div class="form-group">
+            <label class="form-label">投票明細（每行一筆，格式：被投者←投票者）</label>
+            <textarea class="form-textarea" id="edit-vote-details" placeholder="例：3←1,2　x←5（棄票）">${escapeHtml(voteDetailsText)}</textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">出局者（座號）</label>
+            <input class="form-input" type="number" id="edit-eliminated" value="${eliminatedVal}" placeholder="座號">
+          </div>
+        </div>
+      `;
+
+      return `
+        <div class="panel">
+          <div class="panel-title">回合紀錄</div>
+          <div class="round-tabs">${tabs}</div>
+          ${nightForm}
+          ${dayForm}
+          <div class="flex justify-between items-center mt-12">
+            <button class="btn btn-danger" data-action="delete-round">🗑️ 刪除此回合</button>
+            <button class="btn btn-secondary" data-action="add-round">+ 新增回合</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // ---------- 渲染編輯畫面 ----------
+    function renderEditView() {
+      const game = getGame(appState.currentGameId);
+      if (!game) {
+        return `
+          <div class="detail-header">
+            <button class="back-btn btn btn-secondary" data-action="edit-cancel">← 取消</button>
+          </div>
+          <p class="text-muted text-center mt-16">找不到此遊戲紀錄。</p>
+        `;
+      }
+
+      // 勝利方下拉選單
+      const winnerVal = getResultWinner(game.result);
+      const resultDetailVal = getResultDetail(game.result);
+      const winnerOpts = `
+        <option value=""${winnerVal === '' ? ' selected' : ''}>進行中</option>
+        <option value="好人"${winnerVal === '好人' || winnerVal === 'villager' ? ' selected' : ''}>好人勝</option>
+        <option value="狼人"${winnerVal === '狼人' || winnerVal === 'wolf' ? ' selected' : ''}>狼人勝</option>
+      `;
+
+      const header = `
+        <div class="detail-header">
+          <button class="back-btn btn btn-secondary" data-action="edit-cancel">← 取消</button>
+          <div class="detail-header-info">
+            <div class="detail-header-title">編輯遊戲</div>
+          </div>
+          <div class="detail-header-actions">
+            <button class="btn btn-primary" data-action="edit-save">💾 儲存</button>
+          </div>
+        </div>
+      `;
+
+      const basicInfo = `
+        <div class="panel">
+          <div class="panel-title">基本資訊</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">日期</label>
+              <input class="form-input" type="date" id="edit-date" value="${game.date || ''}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">遊戲標題</label>
+              <input class="form-input" type="text" id="edit-title" value="${escapeHtml(game.title || '')}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">板子名稱</label>
+              <input class="form-input" type="text" id="edit-board" value="${escapeHtml(game.board && game.board.name ? game.board.name : (typeof game.board === 'string' ? game.board : ''))}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">勝負結果</label>
+              <select class="form-select" id="edit-winner">${winnerOpts}</select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">結果詳情</label>
+            <input class="form-input" type="text" id="edit-result-detail" value="${escapeHtml(resultDetailVal)}" placeholder="例：狼人全滅">
+          </div>
+        </div>
+      `;
+
+      return header + basicInfo + renderEditPlayers(game) + renderEditRounds(game);
+    }
+
+    // ---------- 渲染應用程式 ----------
+    function renderApp() {
+      const appEl = document.getElementById('app');
+      if (appState.currentView === 'list') {
+        appEl.innerHTML = renderListView();
+      } else if (appState.currentView === 'new') {
+        appEl.innerHTML = renderNewGameView();
+      } else if (appState.currentView === 'detail') {
+        appEl.innerHTML = renderDetailView();
+      } else if (appState.currentView === 'edit') {
+        appEl.innerHTML = renderEditView();
+      } else {
+        appEl.innerHTML = `<p class="text-muted text-center mt-16">View "${appState.currentView}" not yet implemented.</p>`;
+      }
+      bindEvents();
+    }
+
+    // ---------- 顯示匯入彈窗 ----------
+    function showImportModal(file) {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal">
+          <div class="modal-title">匯入遊戲紀錄</div>
+          <p style="font-size:0.875rem;color:#9e8bb5;margin-bottom:12px;">
+            請選擇匯入方式：
+          </p>
+          <p style="font-size:0.8125rem;color:#9e8bb5;">
+            <strong style="color:#e2d4f0;">合併</strong>：保留現有紀錄，跳過重複 ID<br>
+            <strong style="color:#e2d4f0;">覆蓋</strong>：清除所有現有紀錄，以匯入資料取代
+          </p>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" id="modal-cancel">取消</button>
+            <button class="btn btn-secondary" id="modal-merge">合併</button>
+            <button class="btn btn-danger" id="modal-overwrite">覆蓋</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('#modal-cancel').addEventListener('click', () => {
+        overlay.remove();
+      });
+
+      overlay.querySelector('#modal-merge').addEventListener('click', () => {
+        importGames(file, 'merge')
+          .then(() => {
+            overlay.remove();
+            renderApp();
+          })
+          .catch(err => {
+            alert('匯入失敗：' + err.message);
+            overlay.remove();
+          });
+      });
+
+      overlay.querySelector('#modal-overwrite').addEventListener('click', () => {
+        importGames(file, 'overwrite')
+          .then(() => {
+            overlay.remove();
+            renderApp();
+          })
+          .catch(err => {
+            alert('匯入失敗：' + err.message);
+            overlay.remove();
+          });
+      });
+    }
+
+    // ---------- 綁定事件 ----------
+    function bindEvents() {
+      const appEl = document.getElementById('app');
+
+      // ---- 新增遊戲表單輔助函式（參照 appState，所有呼叫共用相同資料）----
+      function renderRoleTags() {
+        const container = document.getElementById('role-tags');
+        if (!container) return;
+        if (appState.newRoles.length === 0) {
+          container.innerHTML = '<span class="text-muted" style="font-size:0.8125rem">尚未新增角色</span>';
+          return;
+        }
+        container.innerHTML = appState.newRoles.map((role, idx) => {
+          const cls = getRoleClass(role);
+          return `<span class="tag tag-${cls}" style="display:inline-flex;align-items:center;gap:4px;">
+            ${escapeHtml(role)}
+            <button data-action="remove-role" data-idx="${idx}"
+              style="background:none;border:none;cursor:pointer;line-height:1;padding:0;color:inherit;opacity:0.7;font-size:1em;"
+              title="移除">×</button>
+          </span>`;
+        }).join('');
+        renderPlayerForms();
+      }
+
+      function renderPlayerForms() {
+        const container = document.getElementById('player-forms');
+        if (!container) return;
+        const countEl = document.getElementById('player-count');
+        if (countEl) countEl.textContent = `${appState.newPlayers.length} 位玩家`;
+        if (appState.newPlayers.length === 0) {
+          container.innerHTML = '<p class="text-muted" style="font-size:0.8125rem;margin-bottom:8px">尚未新增玩家</p>';
+          return;
+        }
+        const roleOptions = appState.newRoles.map(r =>
+          `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`
+        ).join('');
+        container.innerHTML = appState.newPlayers.map((p, idx) => `
+          <div class="flex gap-8 items-center" style="margin-bottom:8px;" data-player-idx="${idx}">
+            <span class="text-muted" style="font-size:0.8125rem;min-width:28px;text-align:center;">${p.seat}</span>
+            <input class="form-input" type="text" placeholder="玩家名稱"
+              data-action="player-name" data-idx="${idx}"
+              value="${escapeHtml(p.name)}" style="flex:1;">
+            <select class="form-select" data-action="player-role" data-idx="${idx}" style="flex:1;">
+              <option value="">選擇角色</option>
+              ${roleOptions}
+            </select>
+            <button data-action="remove-player" data-idx="${idx}"
+              class="btn btn-danger btn-small" style="flex-shrink:0;">×</button>
+          </div>
+        `).join('');
+        appState.newPlayers.forEach((p, idx) => {
+          const sel = container.querySelector(`[data-action="player-role"][data-idx="${idx}"]`);
+          if (sel && p.role) sel.value = p.role;
+        });
+      }
+
+      function addRole() {
+        const input = document.getElementById('new-role-input');
+        if (!input) return;
+        const val = input.value.trim();
+        if (!val) return;
+        appState.newRoles.push(val);
+        input.value = '';
+        renderRoleTags();
+      }
+
+      // ---- 只綁定一次委派事件監聽器 ----
+      if (!appState.eventsBound) {
+        appState.eventsBound = true;
+
+        appEl.addEventListener('click', function (e) {
+          // ---- 列表畫面操作 ----
+          const row = e.target.closest('.game-row');
+          if (row && row.dataset.id) {
+            navigateTo('detail', row.dataset.id);
+            return;
+          }
+
+          if (e.target.id === 'btn-new-game' || e.target.id === 'btn-new-game-empty') {
+            navigateTo('new');
+            return;
+          }
+
+          if (e.target.id === 'btn-export') {
+            exportGames();
+            return;
+          }
+
+          if (e.target.id === 'btn-import') {
+            const fileInput = document.getElementById('file-input');
+            if (fileInput) fileInput.click();
+            return;
+          }
+
+          // ---- 新增遊戲畫面操作 ----
+
+          if (e.target.closest('[data-action="nav-list"]')) {
+            navigateTo('list');
+            return;
+          }
+
+          if (e.target.id === 'btn-add-role') {
+            addRole();
+            return;
+          }
+
+          if (e.target.dataset.action === 'remove-role') {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            if (!isNaN(idx)) {
+              const removedRole = appState.newRoles[idx];
+              appState.newRoles.splice(idx, 1);
+              appState.newPlayers.forEach(p => { if (p.role === removedRole) p.role = ''; });
+              renderRoleTags();
+            }
+            return;
+          }
+
+          if (e.target.id === 'btn-add-player') {
+            appState.newPlayers.push({ seat: appState.newPlayers.length + 1, name: '', role: '', alive: true });
+            renderPlayerForms();
+            return;
+          }
+
+          if (e.target.dataset.action === 'remove-player') {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            if (!isNaN(idx)) {
+              appState.newPlayers.splice(idx, 1);
+              appState.newPlayers.forEach((p, i) => { p.seat = i + 1; });
+              renderPlayerForms();
+            }
+            return;
+          }
+
+          // ---- 編輯畫面操作 ----
+
+          if (e.target.dataset.action === 'edit-round-tab' && e.target.dataset.round !== undefined) {
+            if (appState.currentView === 'edit') {
+              saveCurrentEditPlayers();
+              saveCurrentEditRound();
+            }
+            const roundIdx = parseInt(e.target.dataset.round, 10);
+            if (!isNaN(roundIdx)) {
+              appState.currentRound = roundIdx;
+              renderApp();
+            }
+            return;
+          }
+
+          if (e.target.dataset.action === 'toggle-alive') {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            if (!isNaN(idx)) {
+              const game = getGame(appState.currentGameId);
+              if (game && game.players && game.players[idx] !== undefined) {
+                document.querySelectorAll('[data-action="edit-player-name"]').forEach(input => {
+                  const i = parseInt(input.dataset.idx, 10);
+                  if (!isNaN(i) && game.players[i]) game.players[i].name = input.value.trim();
+                });
+                document.querySelectorAll('[data-action="edit-player-role"]').forEach(input => {
+                  const i = parseInt(input.dataset.idx, 10);
+                  if (!isNaN(i) && game.players[i]) game.players[i].role = input.value.trim();
+                });
+                game.players[idx].alive = game.players[idx].alive === false ? true : false;
+                updateGame(game.id, { players: game.players });
+                renderApp();
+              }
+            }
+            return;
+          }
+
+          if (e.target.dataset.action === 'add-round') {
+            if (appState.currentView === 'edit') {
+              saveCurrentEditRound();
+            }
+            const game = getGame(appState.currentGameId);
+            if (game) {
+              const rounds = game.rounds || [];
+              rounds.push({
+                night: { wolfKill: '', guardTarget: '', seerTarget: '', seerResult: '', witchSave: '', witchPoison: '', customActions: [], deaths: [] },
+                day: { sheriff: { candidates: [], winner: '' }, speeches: [], vote: { details: [], eliminated: '' }, lastWords: '' }
+              });
+              updateGame(game.id, { rounds });
+              appState.currentRound = rounds.length - 1;
+              renderApp();
+            }
+            return;
+          }
+
+          if (e.target.dataset.action === 'delete-round') {
+            const confirmed = confirm('確定要刪除此回合嗎？');
+            if (confirmed) {
+              const game = getGame(appState.currentGameId);
+              if (game && game.rounds) {
+                game.rounds.splice(appState.currentRound, 1);
+                updateGame(game.id, { rounds: game.rounds });
+                if (appState.currentRound >= game.rounds.length) {
+                  appState.currentRound = Math.max(0, game.rounds.length - 1);
+                }
+                renderApp();
+              }
+            }
+            return;
+          }
+
+          if (e.target.closest('[data-action="edit-cancel"]')) {
+            appState.currentView = 'detail';
+            appState.editMode = false;
+            renderApp();
+            return;
+          }
+
+          if (e.target.closest('[data-action="edit-save"]')) {
+            const game = getGame(appState.currentGameId);
+            if (!game) return;
+
+            const editDate = document.getElementById('edit-date');
+            const editTitle = document.getElementById('edit-title');
+            const editBoard = document.getElementById('edit-board');
+            const editWinner = document.getElementById('edit-winner');
+            const editResultDetail = document.getElementById('edit-result-detail');
+
+            const updates = {};
+            if (editDate) updates.date = editDate.value;
+            if (editTitle) {
+              const titleVal = editTitle.value.trim();
+              if (!titleVal) {
+                editTitle.focus();
+                editTitle.style.borderColor = '#cf6679';
+                setTimeout(() => { editTitle.style.borderColor = ''; }, 1500);
+                alert('請輸入遊戲標題');
+                return;
+              }
+              updates.title = titleVal;
+            }
+            if (editBoard) {
+              const existingRoles = game.board && game.board.roles ? game.board.roles : [];
+              updates.board = { name: editBoard.value.trim(), roles: existingRoles };
+            }
+            if (editWinner || editResultDetail) {
+              updates.result = {
+                winner: editWinner ? editWinner.value : (game.result && game.result.winner ? game.result.winner : ''),
+                detail: editResultDetail ? editResultDetail.value.trim() : (game.result && game.result.detail ? game.result.detail : '')
+              };
+            }
+
+            const players = game.players || [];
+            document.querySelectorAll('[data-action="edit-player-name"]').forEach(input => {
+              const idx = parseInt(input.dataset.idx, 10);
+              if (!isNaN(idx) && players[idx]) players[idx].name = input.value.trim();
+            });
+            document.querySelectorAll('[data-action="edit-player-role"]').forEach(input => {
+              const idx = parseInt(input.dataset.idx, 10);
+              if (!isNaN(idx) && players[idx]) players[idx].role = input.value.trim();
+            });
+            updates.players = players;
+
+            const rounds = game.rounds || [];
+            if (rounds.length > 0) {
+              const ri = appState.currentRound < rounds.length ? appState.currentRound : 0;
+              rounds[ri] = collectRoundData(rounds[ri]);
+            }
+            updates.rounds = rounds;
+
+            updateGame(game.id, updates);
+            appState.currentView = 'detail';
+            appState.editMode = false;
+            renderApp();
+            return;
+          }
+
+          // ---- 詳細畫面操作 ----
+
+          if (e.target.classList.contains('round-tab') && e.target.dataset.round !== undefined) {
+            const roundIdx = parseInt(e.target.dataset.round, 10);
+            if (!isNaN(roundIdx)) {
+              appState.currentRound = roundIdx;
+              renderApp();
+            }
+            return;
+          }
+
+          if (e.target.id === 'btn-edit-game') {
+            appState.currentView = 'edit';
+            appState.editMode = true;
+            renderApp();
+            return;
+          }
+
+          if (e.target.id === 'btn-delete-game') {
+            const confirmed = confirm('確定要刪除這筆遊戲紀錄嗎？此動作無法復原。');
+            if (confirmed) {
+              deleteGame(appState.currentGameId);
+              navigateTo('list');
+            }
+            return;
+          }
+
+          if (e.target.id === 'btn-save-game') {
+            const titleEl = document.getElementById('new-title');
+            const dateEl  = document.getElementById('new-date');
+            const boardEl = document.getElementById('new-board');
+
+            const title = titleEl ? titleEl.value.trim() : '';
+            if (!title) {
+              if (titleEl) {
+                titleEl.focus();
+                titleEl.style.borderColor = '#cf6679';
+                setTimeout(() => { titleEl.style.borderColor = ''; }, 1500);
+              }
+              alert('請輸入遊戲標題');
+              return;
+            }
+
+            const date = dateEl ? dateEl.value : new Date().toISOString().slice(0, 10);
+            const boardName = boardEl ? boardEl.value.trim() : '';
+
+            const game = createGame({
+              date,
+              title,
+              board: { name: boardName, roles: appState.newRoles.slice() },
+              players: appState.newPlayers.slice(),
+            });
+
+            navigateTo('detail', game.id);
+            return;
+          }
+        });
+
+        appEl.addEventListener('input', function (e) {
+          if (e.target.dataset.action === 'player-name') {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            if (!isNaN(idx) && appState.newPlayers[idx] !== undefined) {
+              appState.newPlayers[idx].name = e.target.value;
+            }
+          }
+        });
+
+        appEl.addEventListener('change', function (e) {
+          if (e.target.dataset.action === 'player-role') {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            if (!isNaN(idx) && appState.newPlayers[idx] !== undefined) {
+              appState.newPlayers[idx].role = e.target.value;
+            }
+          }
+        });
+
+        appEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' && !e.isComposing && e.target.id === 'new-role-input') {
+            e.preventDefault();
+            addRole();
+          }
+        });
+      }
+
+      // ---- 檔案輸入框（每次渲染重新建立，每次重新綁定）----
+      const fileInput = document.getElementById('file-input');
+      if (fileInput) {
+        fileInput.addEventListener('change', function () {
+          if (this.files && this.files[0]) {
+            showImportModal(this.files[0]);
+            this.value = '';
+          }
+        });
+      }
+
+      // ---- 特定畫面初始化 ----
+      if (appState.currentView === 'new') {
+        renderRoleTags();
+        renderPlayerForms();
+      }
+    }
+
+    /* ================================================
+       進入點 — 初始化應用程式
+       ================================================ */
+    console.log('[werewolf-recorder] data layer ready');
+    renderApp();
+  </script>
+</body>
+</html>
