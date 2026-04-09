@@ -896,9 +896,95 @@
       });
     }
 
+    // ============================================================
+    // 板子預設清單 — 在這裡新增板子名稱與對應角色
+    // 格式：{ name: '板子名稱', roles: ['角色1', '角色2', ...] }
+    // ============================================================
+    const BOARD_PRESETS = [
+      {
+        name: '機械狼',
+        roles: ['機械狼', '小狼', '小狼', '小狼', '通靈師', '女巫', '獵人', '守衛', '平民', '平民', '平民', '平民'],
+      },
+      {
+        name: '大小機械',
+        roles: ['大機械狼', '小機械狼', '小狼', '小狼', '通靈師', '女巫', '獵人', '守衛', '平民', '平民', '平民', '平民'],
+      },
+      {
+        name: '黑市商人',
+        roles: ['狼兄', '狼弟', '小狼', '小狼', '預言家', '女巫', '獵人', '黑市商人', '平民', '平民', '平民', '平民'],
+      },
+      {
+        name: '超級黑商',
+        roles: ['狼兄', '狼弟', '小狼', '小狼', '預言家', '女巫', '獵人', '超級黑商', '平民', '平民', '平民', '平民'],
+      },
+      {
+        name: '狼王魔術師',
+        roles: ['狼王', '小狼', '小狼', '小狼', '預言家', '女巫', '獵人', '魔術師', '平民', '平民', '平民', '平民'],
+      },
+      {
+        name: '血月獵魔',
+        roles: ['血月', '小狼', '小狼', '小狼', '預言家', '女巫', '獵魔人', '白痴', '平民', '平民', '平民', '平民'],
+      },
+      {
+        name: '純白狼巫',
+        roles: ['狼巫', '小狼', '小狼', '小狼', '純白', '女巫', '獵人', '守衛', '平民', '平民', '平民', '平民'],
+      },
+      {
+        name: '靈魅新娘',
+        roles: ['狼王', '小狼', '小狼', '小狼', '預言家', '女巫', '獵人', '守衛', '平民', '平民', '平民', '新娘'],
+      },
+      {
+        name: '尋香魅影',
+        roles: ['尋香魅影', '小狼', '小狼', '小狼', '覺醒預言家', '女巫', '獵人', '守衛', '平民', '平民', '平民', '平民'],
+      },
+      {
+        name: '動物派對',
+        roles: ['狼美', '小狼', '小狼', '小狼', '熊', '白貓', '子狐', '河豚', '小羊', '小羊', '小羊', '小羊'],
+      },
+      {
+        name: '美羊羊',
+        roles: ['紅太狼', '小狼', '小狼', '小狼', '預言家', '女巫', '獵人', '美羊羊', '小羊', '小羊', '小羊', '小羊'],
+      },
+      {
+        name: '酒店風雲',
+        roles: ['色魔', '小混混', '小混混', '小混混', '記者', '保鑣', '少爺', '陪酒妹', '陪酒妹', '陪酒妹', '陪酒妹', '陪酒妹'],
+      },
+      {
+        name: '湯姆貓與傑利鼠',
+        roles: ['湯姆貓', '小貓', '小貓', '小貓', '預言家', '女巫', '獵人', '傑利鼠', '平民', '平民', '平民', '平民'],
+      },
+    ];
+    // ============================================================
+
+    // ============================================================
+    // 常駐玩家名單 — 在這裡新增或修改玩家名字
+    // ============================================================
+    const PLAYER_PRESETS = [
+      'Andy',
+      'Annie',
+      'Chris',
+      'Daniel',
+      'East',
+      'Emis',
+      'Fantor',
+      'Lesler',
+      'Libby',
+      'Liz',
+      'Paul',
+      'Ray',
+      'Rebecca',
+      'Richie',
+      'Roger',
+      'Sally',
+      'Sharon',
+      'Valerie',
+      'Webber',
+    ];
+    // ============================================================
+
     // ---------- 角色分類 ----------
-    const WOLF_ROLES = ['小狼', '狼王', '白狼王', '狼美人', '隱狼', '惡魔', '狼兄', '狼弟', '機械狼'];
-    const GOD_ROLES  = ['預言家','通靈師', '女巫', '獵人', '守衛', '白癡', '丘比特', '盜賊', '黑市商人', '騎士'];
+    const WOLF_ROLES = ['小狼', '狼王', '白狼王', '狼美人', '隱狼', '惡魔', '狼兄', '狼弟', '機械狼', '壞攝夢', '湯姆貓', '小貓', '色魔', '小混混', '紅太狼', '血月', '狼美', '尋香魅影', '狼巫', '魔術師'];
+    const GOD_ROLES  = ['預言家','通靈師', '女巫', '獵人', '守衛', '白癡', '丘比特', '盜賊', '黑市商人', '騎士', '攝夢', '熊', '記者', '保鑣', '少爺', '傑利鼠', '美羊羊', '獵魔人', '白痴', '白貓', '子狐', '河豚', '覺醒預言家', '純白', '超級黑商'];
 
     function getRoleClass(role) {
       if (WOLF_ROLES.includes(role)) return 'wolf';
@@ -948,7 +1034,9 @@
       appState.editMode      = false;
       if (view === 'new') {
         appState.newRoles   = [];
-        appState.newPlayers = [];
+        appState.newPlayers = Array.from({ length: 12 }, (_, i) => ({
+          seat: i + 1, name: '', role: '', alive: true
+        }));
       }
       renderApp();
     }
@@ -1067,7 +1155,10 @@
           <div class="panel-title">板子配置</div>
           <div class="form-group">
             <label class="form-label" for="new-board">板子名稱</label>
-            <input class="form-input" type="text" id="new-board" placeholder="例：標準十二人板">
+            <input class="form-input" type="text" id="new-board" placeholder="例：標準十二人板" list="board-presets-list" autocomplete="off">
+            <datalist id="board-presets-list">
+              ${BOARD_PRESETS.map(b => `<option value="${escapeHtml(b.name)}">`).join('')}
+            </datalist>
           </div>
           <div class="form-group" style="margin-bottom:8px">
             <label class="form-label">新增角色</label>
@@ -1156,8 +1247,7 @@
       // 預言家查驗
       if (night.seerTarget !== undefined && night.seerTarget !== null) {
         const target = night.seerTarget === '' ? '無' : getPlayerLabel(night.seerTarget, game);
-        const seerResultLabel = { '好人': '金水', '壞人': '查殺' }[night.seerResult] || night.seerResult;
-        const result = seerResultLabel ? `→ ${escapeHtml(String(seerResultLabel))}` : '';
+        const result = night.seerResult ? `→ ${escapeHtml(String(night.seerResult))}` : '';
         rows.push(`<div style="display:flex;gap:8px;align-items:flex-start;">
           <span>🔮 預言家：</span>
           <span class="text-god">${escapeHtml(String(target))} ${result}</span>
@@ -1254,6 +1344,17 @@
               ${candidates ? `候選人：${candidates}` : ''}
               ${winner ? `<span style="margin-left:8px;">${winner}</span>` : ''}
             </div>
+          </div>
+        `);
+      }
+
+      // 白天自爆
+      if (day.dayExplode !== undefined && day.dayExplode !== null && day.dayExplode !== '') {
+        const explodeLabel = escapeHtml(String(getPlayerLabel(day.dayExplode, game)));
+        sections.push(`
+          <div class="mb-8">
+            <div style="font-size:0.8125rem;font-weight:600;color:#9e8bb5;margin-bottom:4px;">💥 白天自爆</div>
+            <div style="font-size:0.875rem;"><span class="text-wolf">${explodeLabel}</span></div>
           </div>
         `);
       }
@@ -1469,6 +1570,7 @@
       const sheriffCandidatesEl = document.getElementById('edit-sheriff-candidates');
       const sheriffWinnerEl = document.getElementById('edit-sheriff-winner');
       const speechesEl = document.getElementById('edit-speeches');
+      const dayExplodeEl = document.getElementById('edit-day-explode');
       const voteDetailsEl = document.getElementById('edit-vote-details');
       const eliminatedEl = document.getElementById('edit-eliminated');
       const lastWordsEl = document.getElementById('edit-last-words');
@@ -1523,6 +1625,7 @@
           }
         });
       }
+      day.dayExplode = dayExplodeEl && dayExplodeEl.value !== '' ? parseInt(dayExplodeEl.value, 10) : '';
       day.vote.eliminated = eliminatedEl && eliminatedEl.value !== '' ? parseInt(eliminatedEl.value, 10) : '';
       day.lastWords = lastWordsEl ? lastWordsEl.value : '';
 
@@ -1622,8 +1725,8 @@
       const seerResultVal = night.seerResult || '';
       const seerResultOpts = `
         <option value=""${seerResultVal === '' ? ' selected' : ''}>未查驗</option>
-        <option value="金水"${seerResultVal === '金水' || seerResultVal === '好人' ? ' selected' : ''}>金水</option>
-        <option value="查殺"${seerResultVal === '查殺' || seerResultVal === '壞人' ? ' selected' : ''}>查殺</option>
+        <option value="好人"${seerResultVal === '好人' ? ' selected' : ''}>好人</option>
+        <option value="壞人"${seerResultVal === '壞人' ? ' selected' : ''}>壞人</option>
       `;
 
       // 女巫救人下拉選單
@@ -1733,6 +1836,10 @@
             <span>白天</span>
           </div>
           ${sheriffForm}
+          <div class="form-group">
+            <label class="form-label">白天自爆（座號）</label>
+            <input class="form-input" type="number" id="edit-day-explode" value="${day.dayExplode !== undefined && day.dayExplode !== null ? day.dayExplode : ''}" placeholder="座號">
+          </div>
           <div class="form-group">
             <label class="form-label">投票明細（每行一筆，格式：被投者←投票者）</label>
             <textarea class="form-textarea" id="edit-vote-details" placeholder="例：3←1,2　x←5（棄票）">${escapeHtml(voteDetailsText)}</textarea>
@@ -1930,12 +2037,14 @@
         const roleOptions = appState.newRoles.map(r =>
           `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`
         ).join('');
+        const presetOptions = PLAYER_PRESETS.map(name => `<option value="${escapeHtml(name)}">`).join('');
         container.innerHTML = appState.newPlayers.map((p, idx) => `
           <div class="flex gap-8 items-center" style="margin-bottom:8px;" data-player-idx="${idx}">
             <span class="text-muted" style="font-size:0.8125rem;min-width:28px;text-align:center;">${p.seat}</span>
             <input class="form-input" type="text" placeholder="玩家名稱"
               data-action="player-name" data-idx="${idx}"
-              value="${escapeHtml(p.name)}" style="flex:1;">
+              value="${escapeHtml(p.name)}" style="flex:1;"
+              list="player-presets-list">
             <select class="form-select" data-action="player-role" data-idx="${idx}" style="flex:1;">
               <option value="">選擇角色</option>
               ${roleOptions}
@@ -1943,7 +2052,7 @@
             <button data-action="remove-player" data-idx="${idx}"
               class="btn btn-danger btn-small" style="flex-shrink:0;">×</button>
           </div>
-        `).join('');
+        `).join('') + `<datalist id="player-presets-list">${presetOptions}</datalist>`;
         appState.newPlayers.forEach((p, idx) => {
           const sel = container.querySelector(`[data-action="player-role"][data-idx="${idx}"]`);
           if (sel && p.role) sel.value = p.role;
@@ -2226,6 +2335,15 @@
             const idx = parseInt(e.target.dataset.idx, 10);
             if (!isNaN(idx) && appState.newPlayers[idx] !== undefined) {
               appState.newPlayers[idx].name = e.target.value;
+            }
+          }
+
+          // 板子名稱選到預設時，自動帶入角色
+          if (e.target.id === 'new-board') {
+            const matched = BOARD_PRESETS.find(b => b.name === e.target.value);
+            if (matched) {
+              appState.newRoles = matched.roles.slice();
+              renderRoleTags();
             }
           }
         });
