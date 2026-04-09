@@ -1155,7 +1155,10 @@
           <div class="panel-title">板子配置</div>
           <div class="form-group">
             <label class="form-label" for="new-board">板子名稱</label>
-            <input class="form-input" type="text" id="new-board" placeholder="例：標準十二人板" list="board-presets-list" autocomplete="off">
+            <div class="flex items-center gap-8">
+              <input class="form-input" type="text" id="new-board" placeholder="例：標準十二人板" list="board-presets-list" autocomplete="off" style="flex:1;">
+              <button type="button" id="btn-clear-board" title="清除板子" style="color:#9e8bb5;font-size:1.1rem;padding:4px 6px;flex-shrink:0;line-height:1;">×</button>
+            </div>
             <datalist id="board-presets-list">
               ${BOARD_PRESETS.map(b => `<option value="${escapeHtml(b.name)}">`).join('')}
             </datalist>
@@ -2106,6 +2109,14 @@
 
           if (e.target.id === 'btn-add-role') {
             addRole();
+            return;
+          }
+
+          if (e.target.id === 'btn-clear-board') {
+            const boardEl = document.getElementById('new-board');
+            if (boardEl) boardEl.value = '';
+            appState.newRoles = [];
+            renderRoleTags();
             return;
           }
 
