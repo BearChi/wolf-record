@@ -294,6 +294,11 @@
       background-color: rgba(187, 134, 252, 0.15);
     }
 
+    .player-role.third {
+      color: #ffb347;
+      background-color: rgba(255, 179, 71, 0.15);
+    }
+
     .player-role.villager {
       color: #03dac6;
       background-color: rgba(3, 218, 198, 0.12);
@@ -600,6 +605,12 @@
       border: 1px solid rgba(187, 134, 252, 0.3);
     }
 
+    .tag-third {
+      color: #ffb347;
+      background-color: rgba(255, 179, 71, 0.12);
+      border: 1px solid rgba(255, 179, 71, 0.3);
+    }
+
     .tag-villager {
       color: #03dac6;
       background-color: rgba(3, 218, 198, 0.1);
@@ -646,6 +657,10 @@
 
     .text-god {
       color: #bb86fc;
+    }
+
+    .text-third {
+      color: #ffb347;
     }
 
     .text-villager {
@@ -765,6 +780,7 @@
       color: #e2d4f0;
     }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
   <div id="app"></div>
@@ -847,11 +863,10 @@
     }
 
     // ---------- 匯出 / 匯入 ----------
-    function exportGames() {
-      const games = loadGames();
+    function exportGames(selected) {
       const dateStr = new Date().toISOString().slice(0, 10);
       const filename = `werewolf-backup-${dateStr}.json`;
-      const blob = new Blob([JSON.stringify(games, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(selected, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -860,6 +875,90 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    }
+
+    function showExportModal() {
+      const games = loadGames().slice().sort((a, b) => {
+        const da = a.date || a.createdAt || '';
+        const db = b.date || b.createdAt || '';
+        return db.localeCompare(da);
+      });
+
+      if (games.length === 0) {
+        alert('目前沒有任何遊戲紀錄可以匯出。');
+        return;
+      }
+
+      const rows = games.map(g => {
+        const winner = getResultWinner(g.result);
+        let badge = '';
+        if (winner === '好人' || winner === 'villager') badge = '<span style="color:#03dac6;font-size:0.75rem;">✅ 好人勝</span>';
+        else if (winner === '狼人' || winner === 'wolf') badge = '<span style="color:#cf6679;font-size:0.75rem;">🐺 狼人勝</span>';
+        else badge = '<span style="color:#9e8bb5;font-size:0.75rem;">⏳ 進行中</span>';
+        const dateStr = g.date ? g.date.slice(0, 10) : '';
+        return `
+          <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #3d2a5c;cursor:pointer;">
+            <input type="checkbox" class="export-check" data-id="${escapeHtml(g.id)}" checked
+              style="width:16px;height:16px;accent-color:#bb86fc;flex-shrink:0;">
+            <span style="flex:1;font-size:0.875rem;color:#e2d4f0;">${escapeHtml(g.title || '未命名遊戲')}</span>
+            <span style="font-size:0.75rem;color:#9e8bb5;">${dateStr}</span>
+            ${badge}
+          </label>`;
+      }).join('');
+
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal" style="max-width:520px;">
+          <div class="modal-title">選擇要匯出的遊戲</div>
+          <div style="display:flex;gap:12px;margin-bottom:12px;">
+            <button id="export-check-all" class="btn btn-secondary btn-small">全選</button>
+            <button id="export-uncheck-all" class="btn btn-secondary btn-small">全不選</button>
+            <span id="export-count" style="font-size:0.8125rem;color:#9e8bb5;align-self:center;margin-left:auto;">已選 ${games.length} / ${games.length} 筆</span>
+          </div>
+          <div style="max-height:55vh;overflow-y:auto;">${rows}</div>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" id="export-cancel">取消</button>
+            <button class="btn btn-primary" id="export-confirm">匯出</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      function updateCount() {
+        const total = overlay.querySelectorAll('.export-check').length;
+        const checked = overlay.querySelectorAll('.export-check:checked').length;
+        overlay.querySelector('#export-count').textContent = `已選 ${checked} / ${total} 筆`;
+      }
+
+      overlay.querySelectorAll('.export-check').forEach(cb => {
+        cb.addEventListener('change', updateCount);
+      });
+
+      overlay.querySelector('#export-check-all').addEventListener('click', () => {
+        overlay.querySelectorAll('.export-check').forEach(cb => cb.checked = true);
+        updateCount();
+      });
+
+      overlay.querySelector('#export-uncheck-all').addEventListener('click', () => {
+        overlay.querySelectorAll('.export-check').forEach(cb => cb.checked = false);
+        updateCount();
+      });
+
+      overlay.querySelector('#export-cancel').addEventListener('click', () => overlay.remove());
+
+      overlay.querySelector('#export-confirm').addEventListener('click', () => {
+        const selectedIds = new Set(
+          [...overlay.querySelectorAll('.export-check:checked')].map(cb => cb.dataset.id)
+        );
+        if (selectedIds.size === 0) {
+          alert('請至少選擇一筆遊戲。');
+          return;
+        }
+        const toExport = games.filter(g => selectedIds.has(g.id));
+        exportGames(toExport);
+        overlay.remove();
+      });
     }
 
     /**
@@ -983,12 +1082,15 @@
     // ============================================================
 
     // ---------- 角色分類 ----------
-    const WOLF_ROLES = ['小狼', '狼王', '白狼王', '狼美人', '隱狼', '惡魔', '狼兄', '狼弟', '機械狼', '壞攝夢', '湯姆貓', '小貓', '色魔', '小混混', '紅太狼', '血月', '狼美', '尋香魅影', '狼巫', '魔術師'];
-    const GOD_ROLES  = ['預言家','通靈師', '女巫', '獵人', '守衛', '白癡', '丘比特', '盜賊', '黑市商人', '騎士', '攝夢', '熊', '記者', '保鑣', '少爺', '傑利鼠', '美羊羊', '獵魔人', '白痴', '白貓', '子狐', '河豚', '覺醒預言家', '純白', '超級黑商'];
+    const WOLF_ROLES  = ['小狼', '狼王', '白狼王', '狼美人', '隱狼', '惡魔', '狼兄', '狼弟', '機械狼', '壞攝夢', '湯姆貓', '小貓', '色魔', '小混混', '紅太狼', '血月', '狼美', '尋香魅影', '狼巫', '魔術師', '惡靈'];
+    const GOD_ROLES   = ['預言家','通靈師', '女巫', '獵人', '守衛', '白癡', '丘比特', '盜賊', '黑市商人', '騎士', '攝夢', '熊', '記者', '保鑣', '少爺', '傑利鼠', '美羊羊', '獵魔人', '白痴', '白貓', '子狐', '河豚', '覺醒預言家', '純白', '超級黑商'];
+    // 第三方角色 — 在這裡新增第三方角色名稱
+    const THIRD_ROLES = ['超級黑商(三方)', '奇蹟商人(三方)'];
 
     function getRoleClass(role) {
-      if (WOLF_ROLES.includes(role)) return 'wolf';
-      if (GOD_ROLES.includes(role))  return 'god';
+      if (WOLF_ROLES.includes(role))  return 'wolf';
+      if (GOD_ROLES.includes(role))   return 'god';
+      if (THIRD_ROLES.includes(role)) return 'third';
       return 'villager';
     }
 
@@ -1327,13 +1429,13 @@
     }
 
     // ---------- 渲染白天區塊 ----------
-    function renderDay(day, game) {
+    function renderDay(day, game, roundIdx) {
       if (!day) return '';
 
       const sections = [];
 
-      // 警長競選
-      if (day.sheriff) {
+      // 警長競選（只有第一局顯示）
+      if (roundIdx === 0 && day.sheriff) {
         const candidates = Array.isArray(day.sheriff.candidates)
           ? day.sheriff.candidates.map(s => escapeHtml(String(getPlayerLabel(s, game)))).join('、')
           : '';
@@ -1456,7 +1558,7 @@
 
       const round = rounds[currentRound];
       const nightHtml = renderNight(round.night, game);
-      const dayHtml = renderDay(round.day, game);
+      const dayHtml = renderDay(round.day, game, currentRound);
 
       return `
         <div class="panel">
@@ -1513,6 +1615,7 @@
             <div class="detail-header-meta">${metaParts.join(' · ')} ${resultBadge}</div>
           </div>
           <div class="detail-header-actions">
+            <button class="btn btn-secondary" id="btn-screenshot">📸 截圖</button>
             <button class="btn btn-secondary" id="btn-edit-game">✏️ 編輯</button>
             <button class="btn btn-danger" id="btn-delete-game">🗑️ 刪除</button>
           </div>
@@ -1951,6 +2054,97 @@
       bindEvents();
     }
 
+    // ---------- 截圖 ----------
+    function buildScreenshotCard(game, roundIdx) {
+      const rounds = game.rounds || [];
+
+      // 玩家格
+      const playerCards = (game.players || []).map(p => {
+        const cls = getRoleClass(p.role || '');
+        const colors = { wolf: '#cf6679', god: '#bb86fc', third: '#ffb347', villager: '#03dac6' };
+        const bg    = { wolf: 'rgba(207,102,121,0.15)', god: 'rgba(187,134,252,0.15)', third: 'rgba(255,179,71,0.15)', villager: 'rgba(3,218,198,0.12)' };
+        const dead = p.alive === false ? 'opacity:0.4;' : '';
+        return `<div style="background:#1a1025;border:1px solid #3d2a5c;border-radius:10px;padding:10px 8px;text-align:center;${dead}position:relative;">
+          ${p.alive === false ? '<span style="position:absolute;top:3px;right:5px;font-size:0.7rem;color:#cf6679;">☠</span>' : ''}
+          <div style="font-size:0.65rem;color:#9e8bb5;margin-bottom:2px;">${p.seat} 號</div>
+          <div style="font-size:0.8rem;font-weight:600;color:#e2d4f0;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.name || '（未填）')}</div>
+          <span style="font-size:0.7rem;font-weight:500;padding:1px 5px;border-radius:4px;color:${colors[cls]};background:${bg[cls]};">${escapeHtml(p.role || '未知')}</span>
+        </div>`;
+      }).join('');
+
+      // 回合摘要
+      let roundHtml = '';
+      if (rounds.length > 0 && roundIdx < rounds.length) {
+        const r = rounds[roundIdx];
+        const nightHtml = renderNight(r.night, game);
+        const dayHtml   = renderDay(r.day, game, roundIdx);
+        roundHtml = `
+          <div style="margin-top:16px;">
+            <div style="font-size:0.8125rem;font-weight:600;color:#bb86fc;margin-bottom:10px;">第 ${roundIdx + 1} 局</div>
+            ${nightHtml}${dayHtml}
+          </div>`;
+      }
+
+      // 勝負
+      const winner = getResultWinner(game.result);
+      let resultHtml = '';
+      if (winner === '好人' || winner === 'villager') resultHtml = '<span style="color:#03dac6;font-weight:600;">✅ 好人勝</span>';
+      else if (winner === '狼人' || winner === 'wolf') resultHtml = '<span style="color:#cf6679;font-weight:600;">🐺 狼人勝</span>';
+
+      const card = document.createElement('div');
+      card.style.cssText = `
+        position:fixed; left:-9999px; top:0;
+        width:700px; background:#1a1025; color:#e2d4f0;
+        font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang TC',sans-serif;
+        padding:24px; line-height:1.5; border-radius:16px;
+      `;
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #3d2a5c;">
+          <div>
+            <div style="font-size:1.1rem;font-weight:700;color:#bb86fc;">🐺 ${escapeHtml(game.title || '未命名遊戲')}</div>
+            <div style="font-size:0.75rem;color:#9e8bb5;margin-top:2px;">${game.date || ''} ${game.board && game.board.name ? '· ' + escapeHtml(game.board.name) : ''}</div>
+          </div>
+          <div>${resultHtml}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:4px;">
+          ${playerCards}
+        </div>
+        ${roundHtml}
+      `;
+      document.body.appendChild(card);
+      return card;
+    }
+
+    function captureScreenshot(game, roundIdx) {
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const card = buildScreenshotCard(game, roundIdx);
+      return html2canvas(card, { backgroundColor: '#1a1025', scale: 2 }).then(canvas => {
+        document.body.removeChild(card);
+        const link = document.createElement('a');
+        link.download = `werewolf-${escapeHtml(game.title || 'game')}-局${roundIdx + 1}-${dateStr}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }).catch(() => {
+        document.body.removeChild(card);
+      });
+    }
+
+    function captureAllScreenshots(game) {
+      const rounds = game.rounds || [];
+      if (rounds.length === 0) {
+        alert('目前沒有任何回合紀錄可以截圖。');
+        return;
+      }
+
+      // 依序截圖，每張間隔 600ms 避免瀏覽器擋下載
+      let chain = Promise.resolve();
+      rounds.forEach((_, idx) => {
+        chain = chain.then(() => captureScreenshot(game, idx))
+                     .then(() => new Promise(res => setTimeout(res, 600)));
+      });
+      chain.catch(() => alert('截圖過程發生錯誤。'));
+    }
+
     // ---------- 顯示匯入彈窗 ----------
     function showImportModal(file) {
       const overlay = document.createElement('div');
@@ -2090,7 +2284,7 @@
           }
 
           if (e.target.id === 'btn-export') {
-            exportGames();
+            showExportModal();
             return;
           }
 
@@ -2294,7 +2488,43 @@
             return;
           }
 
-          if (e.target.id === 'btn-edit-game') {
+          if (e.target.closest('#btn-screenshot')) {
+            const game = getGame(appState.currentGameId);
+            if (!game) return;
+            const rounds = game.rounds || [];
+            if (rounds.length <= 1) {
+              // 只有一局或沒有回合，直接截
+              captureScreenshot(game, appState.currentRound);
+            } else {
+              // 有多局，問要截哪些
+              const overlay = document.createElement('div');
+              overlay.className = 'modal-overlay';
+              overlay.innerHTML = `
+                <div class="modal" style="max-width:320px;">
+                  <div class="modal-title">📸 截圖</div>
+                  <p style="font-size:0.875rem;color:#9e8bb5;margin-bottom:16px;">要截哪幾局？</p>
+                  <div class="modal-actions" style="flex-direction:column;gap:8px;">
+                    <button class="btn btn-secondary" id="shot-current" style="width:100%;">只截第 ${appState.currentRound + 1} 局</button>
+                    <button class="btn btn-primary" id="shot-all" style="width:100%;">全部 ${rounds.length} 局都截</button>
+                    <button class="btn btn-secondary" id="shot-cancel" style="width:100%;">取消</button>
+                  </div>
+                </div>
+              `;
+              document.body.appendChild(overlay);
+              overlay.querySelector('#shot-current').addEventListener('click', () => {
+                overlay.remove();
+                captureScreenshot(game, appState.currentRound);
+              });
+              overlay.querySelector('#shot-all').addEventListener('click', () => {
+                overlay.remove();
+                captureAllScreenshots(game);
+              });
+              overlay.querySelector('#shot-cancel').addEventListener('click', () => overlay.remove());
+            }
+            return;
+          }
+
+          if (e.target.closest('#btn-edit-game')) {
             appState.currentView = 'edit';
             appState.editMode = true;
             renderApp();
