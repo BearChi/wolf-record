@@ -617,6 +617,78 @@
       border: 1px solid rgba(3, 218, 198, 0.3);
     }
 
+    /* ===== 計時器 ===== */
+    .timer-display {
+      font-size: 4rem;
+      font-weight: 700;
+      color: #e2d4f0;
+      text-align: center;
+      letter-spacing: 0.05em;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      margin: 8px 0 20px;
+    }
+
+    .timer-display.warning {
+      color: #ffb347;
+    }
+
+    .timer-display.danger {
+      color: #cf6679;
+      animation: pulse 0.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 1; }
+      to   { opacity: 0.5; }
+    }
+
+    .timer-progress-wrap {
+      height: 6px;
+      background: #3d2a5c;
+      border-radius: 3px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .timer-progress-bar {
+      height: 100%;
+      border-radius: 3px;
+      background: #bb86fc;
+      transition: width 0.5s linear, background 0.3s;
+    }
+
+    .timer-presets {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .timer-preset {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 0.8125rem;
+      background: #2d1b4e;
+      border: 1px solid #3d2a5c;
+      color: #9e8bb5;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .timer-preset:hover,
+    .timer-preset.active {
+      border-color: #bb86fc;
+      color: #bb86fc;
+    }
+
+    .timer-controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
     /* ===== 分隔線 ===== */
     .divider {
       height: 1px;
@@ -784,6 +856,13 @@
 </head>
 <body>
   <div id="app"></div>
+  <button id="btn-timer-float" title="計時器"
+    style="position:fixed;bottom:24px;right:24px;z-index:90;
+           width:52px;height:52px;border-radius:50%;
+           background:#bb86fc;color:#1a1025;font-size:1.4rem;
+           border:none;cursor:pointer;box-shadow:0 4px 16px rgba(187,134,252,0.4);
+           display:flex;align-items:center;justify-content:center;
+           transition:transform 0.15s,opacity 0.15s;">⏱️</button>
 
   <script>
     /* ================================================
@@ -1511,6 +1590,31 @@
         `);
       }
 
+      // 白天自訂技能行動
+      if (Array.isArray(day.customActions) && day.customActions.length > 0) {
+        day.customActions.forEach(action => {
+          sections.push(`
+            <div class="mb-8">
+              <div style="display:flex;gap:8px;align-items:flex-start;font-size:0.875rem;">
+                <span>⚡ ${escapeHtml(String(action.role || ''))}: </span>
+                <span>${escapeHtml(String(action.description || ''))}</span>
+              </div>
+            </div>
+          `);
+        });
+      }
+
+      // 白天死亡摘要
+      if (Array.isArray(day.deaths) && day.deaths.length > 0) {
+        const deathLabels = day.deaths.map(seat => escapeHtml(String(getPlayerLabel(seat, game))));
+        sections.push(`
+          <div class="mb-8">
+            <div style="font-size:0.8125rem;font-weight:600;color:#9e8bb5;margin-bottom:4px;">☀️ 白天死亡</div>
+            <div style="font-size:0.875rem;"><span class="text-wolf">${deathLabels.join('、')}</span></div>
+          </div>
+        `);
+      }
+
       // 遺言
       if (day.lastWords !== undefined && day.lastWords !== null && day.lastWords !== '') {
         sections.push(`
@@ -1679,7 +1783,9 @@
       const dayExplodeEl = document.getElementById('edit-day-explode');
       const voteDetailsEl = document.getElementById('edit-vote-details');
       const eliminatedEl = document.getElementById('edit-eliminated');
+      const dayDeathsEl = document.getElementById('edit-day-deaths');
       const lastWordsEl = document.getElementById('edit-last-words');
+      const dayCustomActionsEl = document.getElementById('edit-day-custom-actions');
 
       // 警長
       day.sheriff = {};
@@ -1733,7 +1839,23 @@
       }
       day.dayExplode = dayExplodeEl && dayExplodeEl.value !== '' ? parseInt(dayExplodeEl.value, 10) : '';
       day.vote.eliminated = eliminatedEl && eliminatedEl.value !== '' ? parseInt(eliminatedEl.value, 10) : '';
+      day.deaths = [];
+      if (dayDeathsEl && dayDeathsEl.value.trim()) {
+        day.deaths = dayDeathsEl.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+      }
       day.lastWords = lastWordsEl ? lastWordsEl.value : '';
+      day.customActions = [];
+      if (dayCustomActionsEl && dayCustomActionsEl.value.trim()) {
+        dayCustomActionsEl.value.trim().split('\n').forEach(line => {
+          const colonIdx = line.search(/[：:]/);
+          if (colonIdx > 0) {
+            day.customActions.push({
+              role: line.slice(0, colonIdx).trim(),
+              description: line.slice(colonIdx + 1).trim()
+            });
+          }
+        });
+      }
 
       return { night, day };
     }
@@ -1827,13 +1949,13 @@
       const night = round.night || {};
       const day = round.day || {};
 
-      // 預言家查驗結果下拉選單
-      const seerResultVal = night.seerResult || '';
-      const seerResultOpts = `
-        <option value=""${seerResultVal === '' ? ' selected' : ''}>未查驗</option>
-        <option value="好人"${seerResultVal === '好人' ? ' selected' : ''}>好人</option>
-        <option value="壞人"${seerResultVal === '壞人' ? ' selected' : ''}>壞人</option>
-      `;
+      // 預言家查驗結果（支援自由輸入）
+      const seerResultVal = (() => {
+        const v = night.seerResult || '';
+        if (v === '好人') return '金水';
+        if (v === '壞人') return '查殺';
+        return v;
+      })();
 
       // 女巫救人下拉選單
       const witchSaveVal = (night.witchSave !== undefined && night.witchSave !== null && night.witchSave !== '') ? 'saved' : '';
@@ -1876,6 +1998,10 @@
       })();
       const eliminatedVal = vote.eliminated !== undefined && vote.eliminated !== null ? vote.eliminated : '';
       const lastWordsVal = day.lastWords || '';
+      const dayCustomActionsText = Array.isArray(day.customActions)
+        ? day.customActions.map(a => `${a.role || ''}:${a.description || ''}`).join('\n')
+        : '';
+      const dayDeathsText = Array.isArray(day.deaths) ? day.deaths.join(',') : '';
 
       const nightForm = `
         <div class="night-block">
@@ -1898,7 +2024,13 @@
             </div>
             <div class="form-group">
               <label class="form-label">查驗結果</label>
-              <select class="form-select" id="edit-seer-result">${seerResultOpts}</select>
+              <input class="form-input" type="text" id="edit-seer-result"
+                value="${escapeHtml(seerResultVal)}" placeholder="金水 / 查殺 / 自訂..."
+                list="seer-result-list" autocomplete="off">
+              <datalist id="seer-result-list">
+                <option value="金水">
+                <option value="查殺">
+              </datalist>
             </div>
           </div>
           <div class="form-row">
@@ -1953,6 +2085,14 @@
           <div class="form-group">
             <label class="form-label">出局者（座號）</label>
             <input class="form-input" type="number" id="edit-eliminated" value="${eliminatedVal}" placeholder="座號">
+          </div>
+          <div class="form-group">
+            <label class="form-label">白天死亡（座號，逗號分隔）</label>
+            <input class="form-input" type="text" id="edit-day-deaths" value="${escapeHtml(dayDeathsText)}" placeholder="例：3,7">
+          </div>
+          <div class="form-group">
+            <label class="form-label">自訂技能行動（每行一個，格式：角色名：描述）</label>
+            <textarea class="form-textarea" id="edit-day-custom-actions" placeholder="例：獵人：帶走5號">${escapeHtml(dayCustomActionsText)}</textarea>
           </div>
         </div>
       `;
@@ -2198,6 +2338,110 @@
       });
     }
 
+    // ---------- 計時器 ----------
+    const timerState = {
+      total:     60,
+      remaining: 60,
+      running:   false,
+      interval:  null,
+    };
+
+    function openTimerModal() {
+      if (document.getElementById('timer-overlay')) return;
+
+      const overlay = document.createElement('div');
+      overlay.id = 'timer-overlay';
+      overlay.className = 'modal-overlay';
+
+      function render() {
+        const pct = timerState.total > 0 ? timerState.remaining / timerState.total * 100 : 0;
+        const mins = String(Math.floor(timerState.remaining / 60)).padStart(2, '0');
+        const secs = String(timerState.remaining % 60).padStart(2, '0');
+        const dispClass = timerState.remaining <= 10 ? 'danger' : timerState.remaining <= 20 ? 'warning' : '';
+        const barColor = timerState.remaining <= 10 ? '#cf6679' : timerState.remaining <= 20 ? '#ffb347' : '#bb86fc';
+        const presets = [30, 60, 90, 120];
+
+        overlay.innerHTML = `
+          <div class="modal" style="max-width:340px;text-align:center;">
+            <div class="modal-title" style="text-align:center;">⏱️ 發言計時</div>
+            <div class="timer-presets">
+              ${presets.map(s => `<button class="timer-preset${timerState.total === s ? ' active' : ''}" data-sec="${s}">${s}秒</button>`).join('')}
+            </div>
+            <div class="timer-progress-wrap">
+              <div class="timer-progress-bar" style="width:${pct}%;background:${barColor};"></div>
+            </div>
+            <div class="timer-display ${dispClass}">${mins}:${secs}</div>
+            <div class="timer-controls">
+              <button class="btn btn-secondary" id="timer-reset">重設</button>
+              <button class="btn btn-primary" id="timer-toggle" style="min-width:80px;">
+                ${timerState.running ? '暫停' : (timerState.remaining < timerState.total && timerState.remaining > 0 ? '繼續' : '開始')}
+              </button>
+              <button class="btn btn-secondary" id="timer-close">關閉</button>
+            </div>
+          </div>
+        `;
+        bindTimerEvents();
+      }
+
+      function bindTimerEvents() {
+        overlay.querySelectorAll('.timer-preset').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (timerState.running) stopTimer();
+            timerState.total     = parseInt(btn.dataset.sec, 10);
+            timerState.remaining = timerState.total;
+            render();
+          });
+        });
+
+        overlay.querySelector('#timer-toggle').addEventListener('click', () => {
+          if (timerState.running) {
+            stopTimer();
+          } else {
+            if (timerState.remaining === 0) {
+              timerState.remaining = timerState.total;
+            }
+            startTimer();
+          }
+          render();
+        });
+
+        overlay.querySelector('#timer-reset').addEventListener('click', () => {
+          stopTimer();
+          timerState.remaining = timerState.total;
+          render();
+        });
+
+        overlay.querySelector('#timer-close').addEventListener('click', () => {
+          stopTimer();
+          overlay.remove();
+        });
+      }
+
+      function startTimer() {
+        timerState.running = true;
+        timerState.interval = setInterval(() => {
+          if (timerState.remaining > 0) {
+            timerState.remaining--;
+            render();
+          } else {
+            stopTimer();
+            render();
+          }
+        }, 1000);
+      }
+
+      function stopTimer() {
+        timerState.running = false;
+        clearInterval(timerState.interval);
+        timerState.interval = null;
+      }
+
+      document.body.appendChild(overlay);
+      render();
+    }
+
+    document.getElementById('btn-timer-float').addEventListener('click', openTimerModal);
+
     // ---------- 綁定事件 ----------
     function bindEvents() {
       const appEl = document.getElementById('app');
@@ -2386,7 +2630,7 @@
               const rounds = game.rounds || [];
               rounds.push({
                 night: { wolfKill: '', guardTarget: '', seerTarget: '', seerResult: '', witchSave: '', witchPoison: '', customActions: [], deaths: [] },
-                day: { sheriff: { candidates: [], winner: '' }, speeches: [], vote: { details: [], eliminated: '' }, lastWords: '' }
+                day: { sheriff: { candidates: [], winner: '' }, speeches: [], vote: { details: [], eliminated: '' }, lastWords: '', customActions: [], deaths: [] }
               });
               updateGame(game.id, { rounds });
               appState.currentRound = rounds.length - 1;
